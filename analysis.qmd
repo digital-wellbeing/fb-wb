@@ -1,0 +1,254 @@
+---
+title: "Analysis"
+format: html
+---
+
+```{r}
+# Packages
+library(scales)
+library(patchwork)
+library(ggh4x)
+library(brms)
+library(ggstance)
+library(bayestestR)
+library(tidyverse)
+
+# Plotting theme
+theme_set(
+  theme_linedraw(
+    base_size = 9,
+    # base_family = Font
+  ) +
+    theme(
+      panel.grid = element_blank(),
+      strip.text = element_text(margin = margin(4, 4, 4, 4, "pt")),
+      axis.text = element_text(size = rel(0.75))
+    )
+)
+
+# For ordering outcomes
+oo <- c(
+  "Life_satisfaction", "Negative_experiences", "Positive_experiences"
+)
+
+# Directories for files
+dir.create("models", FALSE)
+dir.create("out", FALSE)
+```
+
+## Prepare data
+
+```{r}
+# Load and merge processed data
+d_fb <- read_csv("data/fb.csv")
+d_outcome <- read_rds("data/outcome.rds") %>% 
+  mutate(outcome = factor(outcome, levels = oo))
+d_pop <- read_rds("data/population.rds")
+
+# Convert fb metrics into country-year proportions
+d_fb <- d_fb %>% 
+  left_join(d_pop) %>% 
+  mutate(
+    dau = dau / pop,
+    mau = mau / pop
+  )
+
+# Merge
+d <- left_join(d_fb, d_outcome) %>% 
+  mutate(age = factor(age, levels = c("13-34", "35+")))
+```
+
+## Data figure
+
+```{r}
+# Figure of all variables over time
+p_a <- d %>% 
+  select(year:mau) %>% 
+  pivot_longer(c(dau, mau), names_to = "outcome", values_to = "val") %>% 
+  mutate(outcome = if_else(outcome == "dau", "Daily FB users", "Monthly FB users")) %>% 
+  ggplot(aes(year, val, col = age, group = interaction(age, country))) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_y_continuous(
+    "Percentage of population", 
+    expand = expansion(.03),
+    breaks = extended_breaks(),
+    labels = ~percent(.)
+  ) +
+  scale_x_continuous(
+    "Year", 
+    breaks = seq(2008, 2018, by = 2), 
+    minor_breaks = seq(2009, 2019, by = 2)
+  ) +
+  geom_line(size = .25) +
+  facet_grid(age~outcome) +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_blank()
+  )
+
+p_b <- d %>% 
+  select(-c(mau, dau)) %>% 
+  # Exclude rows where FB data existed but not GWP data
+  drop_na(val) %>% 
+  # Actual lowest age in GWP
+  mutate(age = factor(age, labels = c("15-34", "35+"))) %>% 
+  ggplot(aes(year, val, col = age, group = interaction(age, country))) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_y_continuous(
+    "Value", 
+    expand = expansion(.01),
+    breaks = extended_breaks()
+  ) +
+  scale_x_continuous(
+    "Year", 
+    breaks = seq(2008, 2018, by = 2), 
+    minor_breaks = seq(2009, 2019, by = 2)
+  ) +
+  geom_line(size = .25) +
+  facet_grid(age~outcome, labeller = as_labeller(~str_replace(., "_", " "))) +
+  theme(legend.position = "none")
+
+
+p_a / p_b
+ggsave("out/Fig-data.png", width = 16, height = 10, units = "cm", dpi = 400)
+```
+
+## Models
+
+```{r}
+# Set global contrasts
+options(contrasts = c(unordered = "contr.sum", ordered = "contr.poly"))
+
+# Prepare data
+dm <- d %>% 
+  # Centering predictors
+  # Grand mean centering so both components are zero-centered
+  mutate(across(c(dau, mau), ~. - mean(., na.rm = TRUE))) %>% 
+  group_by(country) %>%
+  mutate(
+    # Between
+    dau_cb = mean(dau, na.rm = TRUE),
+    mau_cb = mean(mau, na.rm = TRUE),
+    # Within
+    dau_cw = dau - dau_cb, 
+    mau_cw = mau - mau_cb
+  ) %>% 
+  ungroup() %>% 
+  # Center year so that intercepts are at 2014
+  mutate(year = year - 2014) %>% 
+  # Remove rows where predictor existed but outcome didn't
+  drop_na(val)
+
+# Model formula
+model_dau <- bf(
+  val | se(se, sigma = TRUE) ~
+    (year + dau_cw) * age + dau_cb +
+    ((year + dau_cw) * age | country),
+  family = gaussian()
+)
+model_mau <- bf(
+  val | se(se, sigma = TRUE) ~
+    (year + mau_cw) * age + mau_cb +
+    ((year + mau_cw) * age | country),
+  family = gaussian()
+)
+
+fits <- dm %>% 
+  select(outcome, year, country, age, contains("_c"), val, se) %>% 
+  group_by(outcome) %>% 
+  nest() %>% 
+  mutate(
+    dau = map2(
+      data, outcome,
+      ~brm(
+        model_dau,
+        cores = 8, chains = 4, threads = 2,
+        backend = "cmdstanr",
+        adapt_delta = .95,
+        iter = 4000,
+        data = .x,
+        file = str_glue("models/brm-dau-{.y}")
+      )
+    ),
+    mau = map2(
+      data, outcome,
+      ~brm(
+        model_mau,
+        cores = 8, chains = 4, threads = 2,
+        backend = "cmdstanr",
+        adapt_delta = .95,
+        iter = 4000,
+        data = .x,
+        file = str_glue("models/brm-mau-{.y}")
+      )
+    )
+  )
+```
+
+
+```{r}
+# Calculate contrasts for each outcome
+h_dau <- c(
+  "Average" = "dau_cw = 0",
+  "13-34" = "dau_cw + dau_cw:age1 * -1 = 0",
+  "35+" = "dau_cw + dau_cw:age1 * 1 = 0",
+  "Between-country" = "dau_cb = 0"
+)
+h_mau <- c(
+  "Average" = "mau_cw = 0",
+  "13-34" = "mau_cw + mau_cw:age1 * -1 = 0",
+  "35+" = "mau_cw + mau_cw:age1 * 1 = 0",
+  "Between-country" = "mau_cb = 0"
+)
+coefs <- fits %>% 
+  ungroup() %>% 
+  mutate(h = if_else(predictor == "dau", list(h_dau), list(h_mau))) %>% 
+  mutate(
+    world = map2(
+      fit, h,
+      ~hypothesis(.x, .y) %>% 
+        .[["hypothesis"]] %>% 
+        tibble()
+    ),
+    country = map2(
+      fit, h,
+      ~hypothesis(.x, .y, scope = "coef", group = "country") %>% 
+        .[["hypothesis"]] %>% 
+        tibble()
+    )
+  ) %>% 
+  select(-fit, -h)
+
+coefs <- coefs %>% 
+  pivot_longer(c(world, country)) %>% 
+  unnest(value) %>% 
+  mutate(country = if_else(name == "country", as.character(Group), "World")) %>% 
+  mutate(country = fct_relevel(country, "World")) %>% 
+  # Between country contrast not country-specific!
+  filter(!(Hypothesis == "Between-country" & country != "World"))
+coefs %>%   
+  filter(Hypothesis %in% c("13-34", "35+")) %>% 
+  mutate(
+    panel_order = interaction(predictor, outcome, country),
+    panel_order = fct_reorder(panel_order, Estimate)
+  ) %>% 
+  ggplot(aes(Estimate, panel_order, col = Hypothesis)) +
+  scale_color_brewer("Age", palette = "Dark2") +
+  geom_vline(xintercept = 0, lty = 2, size = .25, col = "grey50") +
+  geom_pointrangeh(
+    aes(xmin = CI.Lower, xmax = CI.Upper),
+    size = .25, fatten = 2
+    ) +
+  facet_grid2(predictor~outcome, independent = "all", scales = "free") +
+  theme(
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    legend.position = "none"
+    )
+```
+
+```{r}
+coefs %>% 
+  filter(Hypothesis == "Between-country")
+```
+

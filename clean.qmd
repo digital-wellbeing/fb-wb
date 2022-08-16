@@ -1,0 +1,193 @@
+## Gallup World Poll
+
+```{r}
+library(haven)
+library(knitr)
+library(janitor)
+library(here)
+library(labelled)
+library(countrycode)
+library(tidyverse)
+```
+
+```{r gallup-codebook}
+# Understand variables & values
+# Codes NOTE 1: yes 2: no!
+read_spss(
+  "data-raw/Gallup/The_Gallup_042722.sav",
+  n_max = 1,
+  col_select = c(
+    WPID, 
+    # WP1220,  # Age
+    WP16,
+    WP60, WP61, WP63, WP65, WP67,
+    WP68, WP69, WP70, WP71, WP74
+  )
+) %>%
+  generate_dictionary()
+```
+
+```{r gallup-clean}
+# First liberate the data from the slow SPSS file and save to disk
+gwp_path <- here("data-raw/Gallup/gwp-processed.rds")
+if (!file.exists(gwp_path)) {
+  gwp <- read_spss(
+    here("data-raw/Gallup/The_Gallup_042722.sav"),
+    col_select = c(
+      YEAR_CALENDAR,
+      COUNTRYNEW,
+      WPID, WP1220, 
+      WP16,
+      WP60, WP61, WP63, WP65, WP67,
+      WP68, WP69, WP70, WP71, WP74
+    )
+  )
+  
+  # Get rid of SPSS attributes
+  gwp <- gwp %>%
+    zap_labels() %>%
+    zap_label() %>%
+    zap_widths() %>%
+    zap_formats()
+  
+  # Save into a good format
+  write_rds(gwp, gwp_path)
+} else {
+  gwp <- read_rds(gwp_path)
+}
+
+# Rename and recode variables
+gwp <- gwp %>%
+  clean_names() %>%
+  transmute(
+    country = countrynew,
+    year = year_calendar,
+    id = wpid,
+    age = wp1220,
+    # Don't know, refused, and missing values
+    Life_satisfaction = if_else(between(wp16, 0, 10), wp16, NaN),
+    across(wp60:wp74, ~ if_else(between(., 1, 2), ., NaN)),
+    # Also reverse the weird 1: yes 2: no coding here
+    across(wp60:wp74, ~ 3 - .)
+  )
+
+# Scale scores note rescaling
+gwp <- gwp %>%
+  mutate(
+    Life_satisfaction = Life_satisfaction / 10,
+    Negative_experiences =
+      rowMeans(select(., wp68:wp74), na.rm = TRUE) - 1,
+    Positive_experiences =
+      rowMeans(select(., wp60:wp67), na.rm = TRUE) - 1
+  ) %>%
+  select(-c(wp60:wp74))
+
+# Categorize ages
+gwp <- gwp %>%
+  mutate(
+    age = factor(if_else(age <= 34, "13-34", "35+"))
+  )
+
+# Some age values are missing, drop those
+gwp <- drop_na(gwp, age)
+
+# Include only years in fb data
+gwp <- gwp %>% 
+  filter(between(year, 2008, 2019))
+```
+
+
+```{r gallup-summarise}
+gwp <- gwp %>%
+  pivot_longer(
+    c(
+      Life_satisfaction,
+      Negative_experiences,
+      Positive_experiences
+    ),
+    names_to = "outcome", values_to = "val"
+  ) %>%
+  drop_na(val) %>% 
+  group_by(country, year, age, outcome) %>%
+  summarise(
+    n = n(),
+    se = sd(val, na.rm = TRUE) / sqrt(n),
+    val = mean(val, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# Note that if there is no response variance, SE will be zero, and if there is only 1 response, SE will be NA. Here we fix those by assigning them the maximum SE (0.5)
+gwp <- gwp %>% 
+  mutate(
+    se = if_else(is.na(se) | se == 0, 0.5, se)
+  )
+```
+
+```{r gwp-harmonise-countries}
+# We can see that this would result in North Cyprus being lumped with Cyprus so we need to replace the name before harmonising
+
+# Harmonise old names and replace only if harmonised name found
+gwp <- gwp %>%
+  mutate(
+    country_harmonised = countryname(
+      country,
+      destination = "cldr.short.en"
+    )
+  ) %>%
+  # This picks the harmonised name if exists, otherwise original name
+  # Prevent north cyprus from becoming cyprus
+  mutate(
+    country_harmonised = ifelse(
+      country == "Northern Cyprus",
+      "Northern Cyprus",
+      country_harmonised
+    )
+  ) %>%
+  mutate(country = coalesce(country_harmonised, country)) %>%
+  select(-country_harmonised)
+```
+
+Limit to countries in FB data
+
+```{r}
+fb_countries <- c(
+  'Argentina', 'Armenia', 'Australia', 'Austria', 'Bangladesh', 'Belgium', 'Bolivia', 'Bosnia', 'Brazil', 'Bulgaria', 'Costa Rica', 'Croatia', 'Cyprus', 'Denmark', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Finland', 'France', 'Germany', 'Greece', 'Guatemala', 'Haiti', 'Honduras', 'Hungary', 'India', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Japan', 'Jordan', 'Kenya', 'Libya', 'Lithuania', 'Malawi', 'Malaysia', 'Mexico', 'Morocco', 'Mozambique', 'Netherlands', 'New Zealand', 'Nicaragua', 'Nigeria', 'North Macedonia', 'Norway', 'Pakistan', 'Panama', 'Paraguay', 'Peru', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Serbia', 'Slovakia', 'Slovenia', 'South Africa', 'Spain', 'Sri Lanka', 'Sweden', 'Switzerland', 'Taiwan', 'Thailand', 'Tunisia', 'Turkey', 'UK', 'United Arab Emirates', 'Uruguay', 'US', 'Venezuela'
+  )
+gwp <- gwp %>% 
+  filter(country %in% fb_countries)
+```
+
+Yearly population estimates from world bank, except Taiwan from Wikipedia.
+
+```{r}
+pop <- read_csv(
+  "data-raw/wb/API_SP.POP.TOTL_DS2_en_csv_v2_4335082.csv", 
+  skip = 3
+)
+pop <- pop %>% 
+  select(
+    country = `Country Code`,
+    `2008`:`2019`
+  ) %>% 
+  mutate(
+    country = countrycode(country, origin = "iso3c", destination = "cldr.short.en")
+    ) %>% 
+  filter(country %in% fb_countries) %>% 
+  pivot_longer(`2008`:`2019`, names_to = "year", values_to = "pop") %>% 
+  mutate(year = as.numeric(year))
+
+tw <- tibble(
+  country = "Taiwan",
+  year = 2008:2019,
+  pop = c(23037031, 23119772, 23162123, 23224912, 23315822, 23373517, 23433753, 23492074, 23539816, 23571227, 23588932, 23600903)
+)
+pop <- bind_rows(pop, tw)
+```
+
+
+```{r gallup-save}
+# Save
+dir.create("data", FALSE)
+write_rds(gwp, "data/outcome.rds")
+write_rds(pop, "data/population.rds")
+```
