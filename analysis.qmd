@@ -165,7 +165,7 @@ fits <- dm %>%
         cores = 8, chains = 4, threads = 2,
         backend = "cmdstanr",
         adapt_delta = .95,
-        iter = 4000,
+        iter = 3000,
         data = .x,
         file = str_glue("models/brm-dau-{.y}")
       )
@@ -177,7 +177,7 @@ fits <- dm %>%
         cores = 8, chains = 4, threads = 2,
         backend = "cmdstanr",
         adapt_delta = .95,
-        iter = 4000,
+        iter = 3000,
         data = .x,
         file = str_glue("models/brm-mau-{.y}")
       )
