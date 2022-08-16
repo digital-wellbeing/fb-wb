@@ -6,6 +6,7 @@ format: html
 ```{r}
 # Packages
 library(scales)
+library(knitr)
 library(patchwork)
 library(ggh4x)
 library(brms)
@@ -25,6 +26,7 @@ theme_set(
       axis.text = element_text(size = rel(0.75))
     )
 )
+W <- 24
 
 # For ordering outcomes
 oo <- c(
@@ -41,7 +43,9 @@ dir.create("out", FALSE)
 ```{r}
 # Load and merge processed data
 d_fb <- read_csv("data/fb.csv")
-d_outcome <- read_rds("data/outcome.rds") %>% 
+d_gwp <- read_rds("data/gwp.rds") 
+# d_gwp <- read_rds("data/gwp-SYNTHETIC.rds") # If real data not available
+d_gwp <- d_gwp %>% 
   mutate(outcome = factor(outcome, levels = oo))
 d_pop <- read_rds("data/population.rds")
 
@@ -54,7 +58,7 @@ d_fb <- d_fb %>%
   )
 
 # Merge
-d <- left_join(d_fb, d_outcome) %>% 
+d <- left_join(d_gwp, d_fb) %>% 
   mutate(age = factor(age, levels = c("13-34", "35+")))
 ```
 
@@ -62,8 +66,7 @@ d <- left_join(d_fb, d_outcome) %>%
 
 ```{r}
 # Figure of all variables over time
-p_a <- d %>% 
-  select(year:mau) %>% 
+p_a <- d_fb %>% 
   pivot_longer(c(dau, mau), names_to = "outcome", values_to = "val") %>% 
   mutate(outcome = if_else(outcome == "dau", "Daily FB users", "Monthly FB users")) %>% 
   ggplot(aes(year, val, col = age, group = interaction(age, country))) +
@@ -104,13 +107,14 @@ p_b <- d %>%
     breaks = seq(2008, 2018, by = 2), 
     minor_breaks = seq(2009, 2019, by = 2)
   ) +
-  geom_line(size = .25) +
+  # Aggregate over sex
+  stat_summary(fun = mean, geom = "line", size = .25) +
   facet_grid(age~outcome, labeller = as_labeller(~str_replace(., "_", " "))) +
   theme(legend.position = "none")
 
 
 p_a / p_b
-ggsave("out/Fig-data.png", width = 16, height = 10, units = "cm", dpi = 400)
+ggsave("out/Fig-data.png", width = W, height = W*.66, units = "cm", dpi = 400)
 ```
 
 ## Models
@@ -142,19 +146,19 @@ dm <- d %>%
 # Model formula
 model_dau <- bf(
   val | se(se, sigma = TRUE) ~
-    (year + dau_cw) * age + dau_cb +
-    ((year + dau_cw) * age | country),
+    (year + dau_cw) * age * sex + dau_cb +
+    ((year + dau_cw) * age * sex | country),
   family = gaussian()
 )
 model_mau <- bf(
   val | se(se, sigma = TRUE) ~
-    (year + mau_cw) * age + mau_cb +
-    ((year + mau_cw) * age | country),
+    (year + mau_cw) * age * sex + mau_cb +
+    ((year + mau_cw) * age * sex | country),
   family = gaussian()
 )
 
 fits <- dm %>% 
-  select(outcome, year, country, age, contains("_c"), val, se) %>% 
+  select(outcome, year, country, sex, age, contains("_c"), val, se) %>% 
   group_by(outcome) %>% 
   nest() %>% 
   mutate(
@@ -185,6 +189,7 @@ fits <- dm %>%
   )
 ```
 
+## Forest plot
 
 ```{r}
 # Calculate contrasts for each outcome
@@ -202,6 +207,7 @@ h_mau <- c(
 )
 coefs <- fits %>% 
   ungroup() %>% 
+  pivot_longer(c(dau, mau), names_to = "predictor", values_to = "fit") %>% 
   mutate(h = if_else(predictor == "dau", list(h_dau), list(h_mau))) %>% 
   mutate(
     world = map2(
@@ -217,7 +223,7 @@ coefs <- fits %>%
         tibble()
     )
   ) %>% 
-  select(-fit, -h)
+  select(-fit, -h, -data)
 
 coefs <- coefs %>% 
   pivot_longer(c(world, country)) %>% 
@@ -226,29 +232,143 @@ coefs <- coefs %>%
   mutate(country = fct_relevel(country, "World")) %>% 
   # Between country contrast not country-specific!
   filter(!(Hypothesis == "Between-country" & country != "World"))
+
+# Both predictor and outcome are 0-1, so scale can be interpreted as % change as a function of % change
+```
+
+
+```{r}
 coefs %>%   
   filter(Hypothesis %in% c("13-34", "35+")) %>% 
   mutate(
-    panel_order = interaction(predictor, outcome, country),
-    panel_order = fct_reorder(panel_order, Estimate)
+    predictor = if_else(
+      predictor == "dau", 
+      "Daily FB users", 
+      "Monthly FB users"
+    )
+  ) %>%
+  mutate(
+    # Order countries on increasing magnitude per panel
+    country_order = interaction(predictor, outcome, country),
+    country_order = as.numeric(fct_reorder(country_order, Estimate)),
+    # But also ensure that average ("World") is in bottom
+    country_order = if_else(
+      country == "World", country_order-10000, country_order
+    ),
+    country_order = factor(country_order)
   ) %>% 
-  ggplot(aes(Estimate, panel_order, col = Hypothesis)) +
+  ggplot(aes(Estimate, country_order, col = Hypothesis, shape = Star)) +
+  scale_y_discrete("Country", expand = expansion(.015)) +
+  scale_x_continuous(
+    "Estimated association"
+  ) +
+  scale_shape_manual(values = c(21, 19)) +
   scale_color_brewer("Age", palette = "Dark2") +
+  scale_size_manual(values = c(0.75, 1.5)) +
   geom_vline(xintercept = 0, lty = 2, size = .25, col = "grey50") +
-  geom_pointrangeh(
+  geom_linerangeh(
     aes(xmin = CI.Lower, xmax = CI.Upper),
-    size = .25, fatten = 2
-    ) +
-  facet_grid2(predictor~outcome, independent = "all", scales = "free") +
+    size = .2, position = position_dodgev(.4)
+  ) +
+  geom_point(
+    fill = "white", aes(size = name),
+    position = position_dodgev(.4)
+  ) +
+  facet_grid2(
+    predictor~outcome, independent = "all", scales = "free",
+    labeller = as_labeller(~str_replace(., "_", " "))
+  ) +
   theme(
-    axis.ticks.y = element_blank(),
     axis.text.y = element_blank(),
     legend.position = "none"
-    )
+  )
+
+ggsave("out/Fig-forest.png", width = W, height = W*.66, units = "cm", dpi = 400)
 ```
 
 ```{r}
+# Between-country associations
 coefs %>% 
-  filter(Hypothesis == "Between-country")
+  filter(Hypothesis == "Between-country") %>% 
+  select(predictor, outcome, Estimate, CI.Lower, CI.Upper) %>% 
+  arrange(predictor, outcome)
+  kable()
+```
+
+## Conditional effects plot
+
+```{r}
+# Create a predictor table with evenly spaced mau_cw values for each country
+newx_country <- fits$data[[1]] %>% 
+  group_by(country, age, mau_cb) %>% 
+  filter(mau_cw %in% c(min(mau_cw), max(mau_cw))) %>% 
+  select(country, age, mau_cb, mau_cw) %>% 
+  # For above groupings, create a sequence of dau_cws from min to max
+  group_modify(
+    ~tibble(mau_cw = seq(min(.$mau_cw), max(.$mau_cw), length = 31))
+    ) %>% 
+  ungroup() %>% 
+  mutate(year = 0, se = 0)
+
+newx_world <- fits$data[[1]] %>% 
+  group_by(age) %>% 
+  filter(mau_cw %in% c(min(mau_cw), max(mau_cw))) %>% 
+  select(age, mau_cw) %>% 
+  # For above groupings, create a sequence of mau_cws from min to max
+  group_modify(
+    ~tibble(mau_cw = seq(min(.$mau_cw), max(.$mau_cw), length = 31))
+    ) %>% 
+  ungroup() %>% 
+  mutate(mau_cb = 0, year = 0, se = 0)
+
+newy <- fits %>% 
+  mutate(
+    country = map(
+      mau, 
+      ~bind_cols(newx_country, fitted(.x, newx_country))
+      ),
+    world = map(
+      mau, 
+      ~bind_cols(newx_world, fitted(.x, newx_world, re_formula = NA))
+      )
+  ) %>% 
+  select(outcome, country, world)
+```
+
+
+```{r}
+newy %>% 
+  pivot_longer(c(country, world)) %>% 
+  unnest(value) %>% 
+  ungroup() %>% 
+  mutate(country = if_else(name == "world", "World", country)) %>% 
+  ggplot(aes(mau_cw, Estimate, group = country, col = age, fill = age)) +
+  scale_color_brewer(
+    "Age", 
+    palette = "Dark2", 
+    aesthetics = c("color", "fill")
+  ) +
+  scale_y_continuous(
+    "Estimated outcome",
+    breaks = extended_breaks()
+  ) +
+  scale_x_continuous(
+    "Country-mean deviated monthly FB users",
+    breaks = extended_breaks(),
+    labels = ~percent(.)
+  ) +
+  scale_size_manual(values = c(.2, .4)) +
+  geom_ribbon(
+    data = . %>% filter(name == "world"),
+    aes(ymin = Q2.5, ymax = Q97.5),
+    alpha = .2, col = NA
+  ) +
+  geom_line(aes(size = name)) +
+  facet_grid(
+    age~outcome, scales = "free_y",
+    labeller = as_labeller(~str_replace(., "_", " "))
+  ) +
+  theme(legend.position = "none")
+ggsave("out/Fig-mau-conditional.png", width = W, height = W*.5, units = "cm", dpi = 400)
 ```
 

@@ -1,4 +1,4 @@
-## Gallup World Poll
+## Data cleaning
 
 ```{r}
 library(haven)
@@ -17,7 +17,7 @@ read_spss(
   "data-raw/Gallup/The_Gallup_042722.sav",
   n_max = 1,
   col_select = c(
-    WPID, 
+    WPID, WP1219,
     # WP1220,  # Age
     WP16,
     WP60, WP61, WP63, WP65, WP67,
@@ -36,7 +36,7 @@ if (!file.exists(gwp_path)) {
     col_select = c(
       YEAR_CALENDAR,
       COUNTRYNEW,
-      WPID, WP1220, 
+      WPID, WP1220, WP1219,
       WP16,
       WP60, WP61, WP63, WP65, WP67,
       WP68, WP69, WP70, WP71, WP74
@@ -63,6 +63,7 @@ gwp <- gwp %>%
     country = countrynew,
     year = year_calendar,
     id = wpid,
+    sex = factor(wp1219, levels = c(2, 1), labels = c("Female", "Male")),
     age = wp1220,
     # Don't know, refused, and missing values
     Life_satisfaction = if_else(between(wp16, 0, 10), wp16, NaN),
@@ -89,7 +90,7 @@ gwp <- gwp %>%
   )
 
 # Some age values are missing, drop those
-gwp <- drop_na(gwp, age)
+gwp <- drop_na(gwp, age, sex)
 
 # Include only years in fb data
 gwp <- gwp %>% 
@@ -108,7 +109,7 @@ gwp <- gwp %>%
     names_to = "outcome", values_to = "val"
   ) %>%
   drop_na(val) %>% 
-  group_by(country, year, age, outcome) %>%
+  group_by(country, year, sex, age, outcome) %>%
   summarise(
     n = n(),
     se = sd(val, na.rm = TRUE) / sqrt(n),
@@ -157,11 +158,33 @@ gwp <- gwp %>%
   filter(country %in% fb_countries)
 ```
 
+### Synthetic GWP data
+
+Create synthetic GWP data.
+
+```{r mock-gwp-data}
+gwp_mock_path <- here("data/gwp-SYNTHETIC.rds")
+if (!file.exists(gwp_mock_path)) {
+  library(synthpop)
+  gwp_syn <- gwp %>% 
+    drop_na()
+  gwp_syn <- syn(
+    gwp_syn, 
+    method = c("", "", "", "", "", "normrank", "normrank", "normrank"),
+    maxfaclevels = 72
+  )
+  gwp_syn <- tibble(gwp_syn$syn)
+  saveRDS(gwp_syn, gwp_mock_path)
+}
+```
+
+### Population
+
 Yearly population estimates from world bank, except Taiwan from Wikipedia.
 
 ```{r}
 pop <- read_csv(
-  "data-raw/wb/API_SP.POP.TOTL_DS2_en_csv_v2_4335082.csv", 
+  "data/API_SP.POP.TOTL_DS2_en_csv_v2_4335082.csv", 
   skip = 3
 )
 pop <- pop %>% 
@@ -184,10 +207,11 @@ tw <- tibble(
 pop <- bind_rows(pop, tw)
 ```
 
+### Save
 
 ```{r gallup-save}
 # Save
 dir.create("data", FALSE)
-write_rds(gwp, "data/outcome.rds")
+write_rds(gwp, "data/gwp.rds")
 write_rds(pop, "data/population.rds")
 ```
