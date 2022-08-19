@@ -1,0 +1,561 @@
+---
+title: The association between Facebook adoption and well-being
+shorttitle: Facebook and well-being
+leftheader: Facebook and well-being
+author: 
+  - name: Matti Vuorre
+    affiliation: 1
+    address: Oxford Internet Institute, University of Oxford
+    email: matti.vuorre@oii.ox.ac.uk
+    role:
+      - Design
+      - Administration
+      - Analysis
+      - Visualization
+      - Writing
+  - name: Andrew K. Przybylski
+    affiliation: 1
+    corresponding: yes
+    address: Oxford Internet Institute, University of Oxford
+    email: andy.przybylski@oii.ox.ac.uk
+    role:
+      - Design
+      - Administration
+      - Funding
+      - Resources
+      - Supervision
+      - Visualization
+      - Writing
+
+affiliation:
+  - id: 1
+    institution: Oxford Internet Institute, University of Oxford
+
+authornote: |
+  \noindent \textbf{This manuscript is not yet peer-reviewed.}
+  
+  This research was supported by the Huo Family Foundation and Economic and Social Research Council Grant ES/T008709/1. All code supporting this manuscript is available at X. This draft is available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) at X.
+  
+  The authors declare no conflicts of interest.
+  
+  The analytic code is available at (LINK). Researchers can contact Facebook (WHERE?) to access our code, the Facebook data, and a synthetic version of the Gallup data for reproducing and extending our analyses. 
+  This study and methodology was reviewed and approved by the Oxford Internet Institute's Departmental Research Ethics Committee (SSH_OII_CIA_21_084).
+
+abstract: | 
+  Abstract.
+  
+keywords: well-being, social media
+# wordcount: 
+bibliography: "references.bib"
+floatsintext: yes
+linenumbers: no
+draft: no
+mask: no
+figurelist: no
+tablelist: no
+footnotelist: no
+header-includes:
+  - |
+    \makeatletter
+    \renewcommand{\paragraph}{\@startsection{paragraph}{4}{\parindent}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-1em}%
+      {\normalfont\normalsize\bfseries\typesectitle}}
+    
+    \renewcommand{\subparagraph}[1]{\@startsection{subparagraph}{5}{1em}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-\z@\relax}%
+      {\normalfont\normalsize\bfseries\itshape\hspace{\parindent}{#1}\textit{\addperi}}{\relax}}
+    \makeatother
+
+csl: "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
+documentclass: apa7
+classoption: jou
+output: 
+  papaja::apa6_pdf:
+    number_sections: false
+    keep_tex: false
+  papaja::apa6_docx: 
+    number_sections: false
+editor_options: 
+  chunk_output_type: console
+always_allow_html: true
+---
+
+```{r setup, include = FALSE}
+# Packages
+library(papaja)
+library(scales)
+library(knitr)
+library(patchwork)
+library(ggh4x)
+library(brms)
+library(ggstance)
+library(bayestestR)
+library(tidyverse)
+
+# For ordering outcomes
+oo <- c(
+  "Life_satisfaction", "Negative_experiences", "Positive_experiences"
+)
+
+# Directories for files
+dir.create("models", FALSE)
+dir.create("out", FALSE)
+
+# Document options
+opts_chunk$set(
+  eval = TRUE,
+  cache = TRUE,
+  include = FALSE,
+  warning = FALSE,
+  dpi = 300,
+  fig.align = "center"
+)
+
+# For tables: Show NAs as blanks
+options(knitr.kable.NA = '')
+
+# Plotting options
+theme_set(
+  theme_linedraw(
+    base_size = 8
+  ) +
+    theme(
+      panel.grid = element_blank(),
+      strip.text = element_text(margin = margin(4, 4, 4, 4, "pt")),
+      axis.text = element_text(size = rel(0.7)),
+      axis.ticks = element_line(size = rel(0.4))
+    )
+)
+W <- 24
+```
+
+```{r data-prepare}
+# Load and merge processed data
+d_fb <- read_csv("data/fb.csv")
+d_gwp <- read_rds("data/gwp.rds") 
+# d_gwp <- read_rds("data/gwp-SYNTHETIC.rds") # If real data not available
+d_gwp <- d_gwp %>% 
+  mutate(outcome = factor(outcome, levels = oo))
+d_pop <- read_rds("data/population.rds")
+
+# Convert fb metrics into country-year proportions
+d_fb <- d_fb %>% 
+  left_join(d_pop) %>% 
+  mutate(
+    dau = dau / pop,
+    mau = mau / pop
+  )
+
+# Merge
+d <- left_join(d_gwp, d_fb) %>% 
+  mutate(age = factor(age, levels = c("13-34", "35+")))
+```
+
+```{r models}
+# Set global contrasts
+options(contrasts = c(unordered = "contr.sum", ordered = "contr.poly"))
+
+# Prepare data
+dm <- d %>% 
+  # Centering predictors
+  # Grand mean centering so both components are zero-centered
+  mutate(across(c(dau, mau), ~. - mean(., na.rm = TRUE))) %>% 
+  group_by(country) %>%
+  mutate(
+    # Between
+    dau_cb = mean(dau, na.rm = TRUE),
+    mau_cb = mean(mau, na.rm = TRUE),
+    # Within
+    dau_cw = dau - dau_cb, 
+    mau_cw = mau - mau_cb
+  ) %>% 
+  ungroup() %>% 
+  # Center year so that intercepts are at 2014
+  mutate(year = year - 2014) %>% 
+  # Remove rows where predictor existed but outcome didn't
+  drop_na(val)
+
+# Model formula
+model_dau <- bf(
+  val | se(se, sigma = TRUE) ~
+    (year + dau_cw) * age * sex + dau_cb +
+    ((year + dau_cw) * age * sex | country),
+  family = gaussian()
+)
+model_mau <- bf(
+  val | se(se, sigma = TRUE) ~
+    (year + mau_cw) * age * sex + mau_cb +
+    ((year + mau_cw) * age * sex | country),
+  family = gaussian()
+)
+
+fits <- dm %>% 
+  select(outcome, year, country, sex, age, contains("_c"), val, se) %>% 
+  group_by(outcome) %>% 
+  nest() %>% 
+  mutate(
+    dau = map2(
+      data, outcome,
+      ~brm(
+        model_dau,
+        cores = 8, chains = 4, threads = 2,
+        backend = "cmdstanr",
+        adapt_delta = .95,
+        iter = 3000,
+        data = .x,
+        file = str_glue("models/brm-dau-{.y}")
+      )
+    ),
+    mau = map2(
+      data, outcome,
+      ~brm(
+        model_mau,
+        cores = 8, chains = 4, threads = 2,
+        backend = "cmdstanr",
+        adapt_delta = .95,
+        iter = 3000,
+        data = .x,
+        file = str_glue("models/brm-mau-{.y}")
+      )
+    )
+  )
+```
+
+# Results
+
+```{r fig-data}
+#| include: true
+#| out.width: "\\textwidth"
+#| fig.env: "figure*"
+#| fig.height: 5.4
+#| fig.cap: Time courses of key variables. A. Daily and monthly Facebook users in two age brackets for 72 countries from 2008 to 2019. B. Mean responses to three well-being scales in the Gallup World Poll from 72 countries from 2008 to 2019.
+
+# Figure of all variables over time
+p_a <- d_fb %>% 
+  pivot_longer(c(dau, mau), names_to = "outcome", values_to = "val") %>% 
+  mutate(outcome = if_else(outcome == "dau", "Daily FB users", "Monthly FB users")) %>% 
+  mutate(panel = str_glue("{outcome} ({age})")) %>% 
+  ggplot(aes(year, val, group = country)) +
+  scale_y_continuous(
+    "Percentage of population", 
+    expand = expansion(.03),
+    breaks = extended_breaks(),
+    labels = ~percent(.)
+  ) +
+  scale_x_continuous(
+    "Year", 
+    breaks = seq(2008, 2018, by = 2), 
+    minor_breaks = seq(2009, 2019, by = 2)
+  ) +
+  geom_line(size = .2, col = "gray30") +
+  geom_smooth(group = 1, method = "gam", se = F) +
+  facet_wrap("panel", nrow = 1) +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_blank()
+  )
+
+p_b <- d %>% 
+  select(-c(mau, dau)) %>% 
+  # Exclude rows where FB data existed but not GWP data
+  drop_na(val) %>% 
+  # Actual lowest age in GWP
+  mutate(age = factor(age, labels = c("15-34", "35+"))) %>% 
+  mutate(panel = str_glue("{outcome} ({age})")) %>% 
+  ggplot(aes(year, val, group = country)) +
+  scale_color_brewer(palette = "Dark2") +
+  scale_y_continuous(
+    "Value", 
+    expand = expansion(.01),
+    breaks = extended_breaks()
+  ) +
+  scale_x_continuous(
+    "Year", 
+    breaks = seq(2008, 2018, by = 2),
+    labels = ~str_replace(., "20", "'")
+  ) +
+  # Aggregate over sex
+  geom_line(size = .2, col = "gray30") +
+  geom_smooth(group = 1, method = "gam", se = F) +
+  facet_grid(sex~panel, labeller = as_labeller(~str_replace(., "_", " "))) +
+  theme(legend.position = "none")
+
+
+(p_a / p_b) +
+  plot_layout(heights = c(4, 6)) +
+  plot_annotation(tag_levels = "A")
+# ggsave("out/Fig-data.png", width = W, height = W*.66, units = "cm", dpi = 400)
+```
+
+```{r fig-forest-prepare}
+# Calculate contrasts for each outcome
+h_dau <- c(
+  "Average" = "dau_cw = 0",
+  "13-34_Female" = 
+    "dau_cw + dau_cw:age1 * -1 + dau_cw:sex1 * -1 + dau_cw:age1:sex1 * 1 = 0",
+  "13-34_Male" = 
+    "dau_cw + dau_cw:age1 * -1 + dau_cw:sex1 * 1 + dau_cw:age1:sex1 * -1 = 0",
+  "35+_Female" = 
+    "dau_cw + dau_cw:age1 * 1 + dau_cw:sex1 * -1 + dau_cw:age1:sex1 * -1 = 0",
+  "35+_Male" = 
+    "dau_cw + dau_cw:age1 * 1 + dau_cw:sex1 * 1 + dau_cw:age1:sex1 * 1 = 0",
+  "13-34" = "dau_cw + dau_cw:age1 * -1 = 0",
+  "35+" = "dau_cw + dau_cw:age1 * 1 = 0",
+  "Female" = "dau_cw + dau_cw:sex1 * -1 = 0",
+  "Male" = "dau_cw + dau_cw:sex1 * 1 = 0",
+  "Between-country" = "dau_cb = 0"
+)
+h_mau <- c(
+  "Average" = "mau_cw = 0",
+  "13-34_Female" = 
+    "mau_cw + mau_cw:age1 * -1 + mau_cw:sex1 * -1 + mau_cw:age1:sex1 * 1 = 0",
+  "13-34_Male" = 
+    "mau_cw + mau_cw:age1 * -1 + mau_cw:sex1 * 1 + mau_cw:age1:sex1 * -1 = 0",
+  "35+_Female" = 
+    "mau_cw + mau_cw:age1 * 1 + mau_cw:sex1 * -1 + mau_cw:age1:sex1 * -1 = 0",
+  "35+_Male" = 
+    "mau_cw + mau_cw:age1 * 1 + mau_cw:sex1 * 1 + mau_cw:age1:sex1 * 1 = 0",
+  "13-34" = "mau_cw + mau_cw:age1 * -1 = 0",
+  "35+" = "mau_cw + mau_cw:age1 * 1 = 0",
+  "Female" = "mau_cw + mau_cw:sex1 * -1 = 0",
+  "Male" = "mau_cw + mau_cw:sex1 * 1 = 0",
+  "Between-country" = "mau_cb = 0"
+)
+coefs <- fits %>% 
+  ungroup() %>% 
+  pivot_longer(c(dau, mau), names_to = "predictor", values_to = "fit") %>% 
+  mutate(h = if_else(predictor == "dau", list(h_dau), list(h_mau))) %>% 
+  mutate(
+    world = map2(
+      fit, h,
+      ~hypothesis(.x, .y) %>% 
+        .[["hypothesis"]] %>% 
+        tibble()
+    ),
+    country = map2(
+      fit, h,
+      ~hypothesis(.x, .y, scope = "coef", group = "country") %>% 
+        .[["hypothesis"]] %>% 
+        tibble()
+    )
+  ) %>% 
+  select(-fit, -h, -data)
+
+coefs <- coefs %>% 
+  pivot_longer(c(world, country)) %>% 
+  unnest(value) %>% 
+  mutate(country = if_else(name == "country", as.character(Group), "World")) %>% 
+  mutate(country = fct_relevel(country, "World")) %>% 
+  # Between country contrast not country-specific!
+  filter(!(Hypothesis == "Between-country" & country != "World"))
+
+# Both predictor and outcome are 0-1, so scale can be interpreted as % change as a function of % change
+```
+
+```{r fig-forest}
+#| include: true
+
+coefs %>%   
+  filter(str_detect(Hypothesis, "_")) %>% 
+  mutate(
+    predictor = if_else(
+      predictor == "dau", 
+      "Daily FB users", 
+      "Monthly FB users"
+    )
+  ) %>%
+  separate(Hypothesis, c("Age", "Sex"), sep = "_") %>% 
+  mutate(outcome = str_glue("{outcome} ({Age})")) %>% 
+  mutate(
+    # Order countries on increasing magnitude per panel
+    country_order = interaction(predictor, outcome, country),
+    country_order = as.numeric(fct_reorder(country_order, Estimate)),
+    # But also ensure that average ("World") is in bottom
+    country_order = if_else(
+      country == "World", country_order-10000, country_order
+    ),
+    country_order = factor(country_order)
+  ) %>% 
+  ggplot(aes(Estimate, country_order, col = Sex, shape = Star)) +
+  scale_y_discrete("Country", expand = expansion(.015)) +
+  scale_x_continuous(
+    "Estimated association"
+  ) +
+  scale_shape_manual(values = c(21, 19)) +
+  scale_color_brewer("Sex", palette = "Set1") +
+  scale_size_manual(values = c(0.75, 1.5)) +
+  geom_vline(xintercept = 0, lty = 2, size = .25, col = "grey50") +
+  geom_linerangeh(
+    aes(xmin = CI.Lower, xmax = CI.Upper),
+    size = .2, position = position_dodgev(.4)
+  ) +
+  geom_point(
+    fill = "white", aes(size = name),
+    position = position_dodgev(.6)
+  ) +
+  facet_grid2(
+    predictor~outcome, independent = "all", scales = "free",
+    labeller = as_labeller(~str_replace(., "_", " "))
+  ) +
+  guides(shape = "none", size = "none") +
+  theme(
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank(),
+    legend.position = "bottom"
+  )
+
+ggsave("out/Fig-forest.png", width = W, height = W*.66, units = "cm", dpi = 400)
+```
+
+```{r tab-between}
+#| include: true
+
+# Between-country associations
+coefs %>% 
+  mutate(
+    predictor = if_else(
+      predictor == "dau", 
+      "Daily FB users", 
+      "Monthly FB users"
+    )
+  ) %>%
+  mutate(outcome = str_replace(outcome, "_", " ")) %>% 
+  filter(Hypothesis == "Between-country") %>% 
+  select(
+    Predictor = predictor, Outcome = outcome, Estimate, CI.Lower, CI.Upper
+  ) %>% 
+  arrange(Predictor, Outcome) %>% 
+  apa_table()
+```
+
+```{r fig-ce-prepare}
+# Create a predictor table with evenly spaced mau_cw values for each country
+newx_country <- fits$data[[1]] %>% 
+  group_by(country, age, sex, mau_cb) %>% 
+  filter(mau_cw %in% c(min(mau_cw), max(mau_cw))) %>% 
+  select(country, age, sex, mau_cb, mau_cw) %>% 
+  # For above groupings, create a sequence of dau_cws from min to max
+  group_modify(
+    ~tibble(mau_cw = seq(min(.$mau_cw), max(.$mau_cw), length = 31))
+    ) %>% 
+  ungroup() %>% 
+  mutate(year = 0, se = 0)
+
+newx_world <- fits$data[[1]] %>% 
+  group_by(age, sex) %>% 
+  filter(mau_cw %in% c(min(mau_cw), max(mau_cw))) %>% 
+  select(age, sex, mau_cw) %>% 
+  # For above groupings, create a sequence of mau_cws from min to max
+  group_modify(
+    ~tibble(mau_cw = seq(min(.$mau_cw), max(.$mau_cw), length = 31))
+    ) %>% 
+  ungroup() %>% 
+  mutate(mau_cb = 0, year = 0, se = 0)
+
+newy <- fits %>% 
+  mutate(
+    country = map(
+      mau, 
+      ~bind_cols(newx_country, fitted(.x, newx_country))
+      ),
+    world = map(
+      mau, 
+      ~bind_cols(newx_world, fitted(.x, newx_world, re_formula = NA))
+      )
+  ) %>% 
+  select(outcome, country, world)
+```
+
+```{r fig-ce}
+#| include: true
+
+newy %>% 
+  pivot_longer(c(country, world)) %>% 
+  unnest(value) %>% 
+  ungroup() %>% 
+  mutate(country = if_else(name == "world", "World", country)) %>% 
+  ggplot(
+    aes(mau_cw, Estimate, group = interaction(country, sex), col = sex, fill = sex)
+    ) +
+  scale_color_brewer(
+    "Age", 
+    palette = "Dark2", 
+    aesthetics = c("color", "fill")
+  ) +
+  scale_y_continuous(
+    "Estimated outcome",
+    breaks = extended_breaks()
+  ) +
+  scale_x_continuous(
+    "Country-mean deviated monthly FB users",
+    breaks = extended_breaks(),
+    labels = ~percent(.)
+  ) +
+  scale_size_manual(values = c(.2, .4)) +
+  geom_ribbon(
+    data = . %>% filter(name == "world"),
+    aes(ymin = Q2.5, ymax = Q97.5),
+    alpha = .2, col = NA
+  ) +
+  geom_line(aes(size = name)) +
+  facet_grid(
+    age~outcome, scales = "free_y",
+    labeller = as_labeller(~str_replace(., "_", " "))
+  ) +
+  theme(legend.position = "none")
+ggsave("out/Fig-mau-conditional.png", width = W, height = W*.5, units = "cm", dpi = 400)
+```
+
+# Discussion
+
+# References
+
+::: {#refs}
+:::
+
+# Supporting information
+
+## Extended Methods
+
+### Facebook engagement
+
+```{r}
+# Text list of countries
+countries <- sort(unique(d_fb$country))
+countries[length(countries)] <- paste("and", countries[length(countries)])
+countries <- str_c(countries, collapse = ", ")
+```
+
+We studied two metrics of Facebook adoption, daily (DAU) and monthly active users (MAU), from 2008 to 2019 for 72 countries (`r countries`). FB estimates yearly DAU & MAU with their corresponding means from June 1 to August 31, and rounds values greater than 10,000,000 to three significant digits, and values less than 10,000,000 to the nearest 10,000. These estimates are calculated separately for individuals aged 13-34 and 35+. User age is determined based on Facebook profile information, which can be inaccurate (e.g. young individuals report an older age.) Accordingly, 0.008% of total MAU were trimmed to exclude accounts with unrealistic on non-reported age. An account's country is determined on a number of factors including the user's IP address and self-reported location.
+
+Facebook defines users as individuals who visited Facebook or used Messenger during the appropriate period. Although accurately captured, these numbers are not perfect indicators of actual user numbers because of possible duplicate and false accounts. FB estimates those accounts to count for 11% and 5% of global MAUs, and that the former may be more likely in developing regions. Because internal criteria and methodology for determining duplicate and false accounts can change over time, estimates of MAU and DAU can also change.
+
+### Well-being
+
+```{r}
+# N is max N over different outcomes
+gwp_n <- d_gwp %>% 
+  group_by(outcome) %>% 
+  summarise(n = sum(n)) %>% 
+  pull(n) %>% 
+  max()
+
+# N groups same logic
+gwp_n_groups <- count(d_gwp, outcome) %>% 
+  pull(n) %>% 
+  max()
+```
+
+Gallup World Poll (GWP) is a nationally representative annual survey of 1,000 civilian, non-institutionalised individuals aged 15 years or older from 164 countries conducted since 2005. The surveys are conducted face-to-face or on the phone in the respondents’ native language and by local interviewers (for details, see [@gallupGallupWorldPoll2020; @gallupHowDoesGallup2014]). We studied Positive (PE) and Negative Experiences (NE), and life satisfaction. PE and NE measure respondents’ experienced well-being on the day before the survey with five items each. For PE, these items are: "Did you feel well-rested yesterday?", "Were you treated with respect all day yesterday?", "Did you smile or laugh a lot yesterday?", "Did you learn or do something interesting yesterday?, and "(Did you experience the following feelings during a lot of the day yesterday?) How about enjoyment?".
+
+The NE items are responses to "Did you experience the following feelings during a lot of the day yesterday?" for physical pain, worry, sadness, stress, and anger? For analyses we used the means of these scales. Life satisfaction in the moment was measured with one 11-step Likert item, "Please imagine a ladder, with steps numbered from 0 at the bottom to 10 at the top. The top of the ladder represents the best possible life for you and the bottom of the ladder represents the worst possible life for you. On which step of the ladder would you say you personally feel you stand at this time?". For analyses, we scaled these variables to percentages, and aggregated the `r number(gwp_n, big.mark = ",")` individuals’ data to means and standard errors for each country, year, sex, and age (15-34 and 35+) combination (`r number(gwp_n_groups, big.mark = ",")` cells).
+
+### Data analysis
+
+Before analysing the data, we converted Facebook DAU and MAU to proportions of each country's yearly population sizes using population data from World Bank (midyear estimates; <https://data.worldbank.org/indicator/SP.POP.TOTL>). For Taiwan, we used population data from Wikipedia (<https://en.wikipedia.org/wiki/Demographics_of_Taiwan#Population_census>), because the World Bank data does not include Taiwan.
+
+We examined the association between Facebook adoption and well-being through bayesian hierarchical regression models, estimated separately for DAU and MAU, and each of the three well-being outcomes. We regressed the outcome $y$ on time (decades, centered on 2014), within-country centered $x$ (DAU / MAU), age, sex, all the interactions except time by $x$, and the between-country centered DAU. We allowed all coefficients to vary randomly across the 72 countries, except the between-country predictor. Because we aggregated the outcomes, we included to standard errors of the outcome in the model to account for the varying group sizes.
+
+We conducted all data analyses with the R language for statistical computing [@rcoreteamLanguageEnvironmentStatistical2021] and estimated the models using Stan’s Hamiltonian Monte Carlo sampling via the brms R package [@burknerBrmsPackageBayesian2017; @standevelopmentteamStanModelingLanguage2021]. We used default noninformative priors, 4 HMC chains with 3,000 iterations and first 1,500 as warmup for 6,000 total iterations; we report all parameters with their posterior means and 95% credible intervals (posterior 2.5 and 97.5 percentiles; CI), and other posterior probabilities as indicated in text.

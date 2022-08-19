@@ -5,4 +5,7 @@
 
 data-raw/
 data/
-models/
+models*/
+*_cache/
+*_files/
+out/
