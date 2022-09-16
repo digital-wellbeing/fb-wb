@@ -1,4 +1,4 @@
-## Data cleaning
+# Data cleaning
 
 ```{r}
 library(haven)
@@ -9,6 +9,8 @@ library(labelled)
 library(countrycode)
 library(tidyverse)
 ```
+
+## Gallup
 
 ```{r gallup-codebook}
 # Understand variables & values
@@ -153,7 +155,7 @@ Limit to countries in FB data
 ```{r}
 fb_countries <- c(
   'Argentina', 'Armenia', 'Australia', 'Austria', 'Bangladesh', 'Belgium', 'Bolivia', 'Bosnia', 'Brazil', 'Bulgaria', 'Costa Rica', 'Croatia', 'Cyprus', 'Denmark', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Finland', 'France', 'Germany', 'Greece', 'Guatemala', 'Haiti', 'Honduras', 'Hungary', 'India', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Japan', 'Jordan', 'Kenya', 'Libya', 'Lithuania', 'Malawi', 'Malaysia', 'Mexico', 'Morocco', 'Mozambique', 'Netherlands', 'New Zealand', 'Nicaragua', 'Nigeria', 'North Macedonia', 'Norway', 'Pakistan', 'Panama', 'Paraguay', 'Peru', 'Poland', 'Portugal', 'Puerto Rico', 'Qatar', 'Serbia', 'Slovakia', 'Slovenia', 'South Africa', 'Spain', 'Sri Lanka', 'Sweden', 'Switzerland', 'Taiwan', 'Thailand', 'Tunisia', 'Turkey', 'UK', 'United Arab Emirates', 'Uruguay', 'US', 'Venezuela'
-  )
+)
 gwp <- gwp %>% 
   filter(country %in% fb_countries)
 ```
@@ -178,34 +180,76 @@ if (!file.exists(gwp_mock_path)) {
 }
 ```
 
-### Population
+## Population
 
-Yearly population estimates from world bank, except Taiwan from Wikipedia.
+From <https://population.un.org/wpp/Download/Standard/Population/>.
 
 ```{r}
-pop <- read_csv(
-  "data/API_SP.POP.TOTL_DS2_en_csv_v2_4335082.csv", 
-  skip = 3
-)
+library(readxl)
+pop <- read_excel(
+  "data/WPP2022_POP_F01_1_POPULATION_SINGLE_AGE_BOTH_SEXES.xlsx", 
+  sheet = 1, 
+  skip = 16,
+  col_types = "text",
+  .name_repair = make_clean_names
+  )
 pop <- pop %>% 
+  drop_na(iso3_alpha_code) %>% 
   select(
-    country = `Country Code`,
-    `2008`:`2019`
+    iso3_alpha_code, year, starts_with("x")
   ) %>% 
   mutate(
-    country = countrycode(country, origin = "iso3c", destination = "cldr.short.en")
-    ) %>% 
-  filter(country %in% fb_countries) %>% 
-  pivot_longer(`2008`:`2019`, names_to = "year", values_to = "pop") %>% 
-  mutate(year = as.numeric(year))
-
-tw <- tibble(
-  country = "Taiwan",
-  year = 2008:2019,
-  pop = c(23037031, 23119772, 23162123, 23224912, 23315822, 23373517, 23433753, 23492074, 23539816, 23571227, 23588932, 23600903)
-)
-pop <- bind_rows(pop, tw)
+    country = countrycode(
+      iso3_alpha_code, 
+      origin = "iso3c", 
+      destination = "cldr.short.en"
+    )
+  )
+pop <- pop %>% 
+  filter(
+    country %in% fb_countries,
+    between(year, 2008, 2019)
+  ) %>% 
+  pivot_longer(
+    starts_with("x"), 
+    names_to = "age",
+    values_to = "pop",
+    names_transform = ~str_remove(., "x") %>% as.numeric, 
+    values_transform = ~ as.numeric(.) * 1000
+  ) %>% 
+  filter(between(age, 13, 100)) %>% 
+  mutate(
+    age = cut(age, c(0, 34.5, 1000), labels = c("13-34", "35+"))
+  )
+pop <- pop %>% 
+  mutate(year = as.numeric(year)) %>% 
+  group_by(country, year, age) %>% 
+  summarise(pop = sum(pop)) %>% 
+  ungroup()
 ```
+
+## Synthetic Facebook data
+
+Here we create simple time trend data that can be used for reproducing the computations when the actual Facebook data is not available. It does not represent any statistical properties of the Facebook data and is created simply to help run the computations.
+
+```{r}
+fb_mock_path <- here("data/fb-SYNTHETIC.rds")
+if (!file.exists(fb_mock_path)) {
+  library(extraDistr)
+  set.seed(999)
+  slopes <- distinct(pop, country) %>% 
+    mutate(slope = rnorm(72, 0.75, 0.1))
+  fb_syn <- pop %>% 
+    left_join(slopes) %>% 
+    rowwise() %>% 
+    mutate(
+      dau = rprop(1, 50, plogis(-4 + slope*(year-2008))),
+      mau = rprop(1, 100, plogis(-5 + slope*(year-2008)))
+    )
+  saveRDS(fb_syn, fb_mock_path)
+}
+```
+
 
 ### Save
 
