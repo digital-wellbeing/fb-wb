@@ -1,6 +1,6 @@
 # Facebook adoption and well-being
 
-Code supporting *Estimating the association between Facebook adoption and well-being* (Vuorre & Przybylski, [preprint]()).
+Code supporting *Estimating the association between Facebook adoption and well-being* (Vuorre & Przybylski, [preprint](https://psyarxiv.com/r794k)).
 
 This project uses proprietary data which cannot be shared. All the code used to analyse those data are here. This code was used in FB's research environment (FORT). To reproduce our analyses with actual Facebook and synthetic Gallup data, contact Facebook at <ccobb@fb.com> or <ss1-tech-support@fb.com>.
 
