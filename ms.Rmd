@@ -1,74 +1,57 @@
 ---
-title: The association between Facebook adoption and well-being
-shorttitle: Facebook and well-being
-leftheader: Facebook and well-being
-author: 
+title: Estimating the association between Facebook adoption and well-being
+
+# Use letters for affiliations, numbers to show equal authorship (if applicable) and to indicate the corresponding author
+author:
   - name: Matti Vuorre
-    affiliation: 1
-    address: Oxford Internet Institute, University of Oxford
-    email: matti.vuorre@oii.ox.ac.uk
-    role:
-      - Design
-      - Administration
-      - Analysis
-      - Visualization
-      - Writing
+    affiliation: a
   - name: Andrew K. Przybylski
-    affiliation: 1
-    corresponding: yes
-    address: Oxford Internet Institute, University of Oxford
-    email: andy.przybylski@oii.ox.ac.uk
-    role:
-      - Design
-      - Administration
-      - Funding
-      - Resources
-      - Supervision
-      - Visualization
-      - Writing
+    affiliation: a,1
+address:
+  - code: a
+    address: Oxford Internet Institute, University of Oxford, 1 St Giles, Oxford OX1 3JS, United Kingdom
 
-affiliation:
-  - id: 1
-    institution: Oxford Internet Institute, University of Oxford
+corresponding_author:
+  code: 1
+  text: "To whom correspondence should be addressed. E-mail: andy.przybylski@oii.ox.ac.uk"
 
-authornote: |
-  \noindent \textbf{This manuscript is not yet peer-reviewed.}
-  
-  This research was supported by the Huo Family Foundation and Economic and Social Research Council Grant ES/T008709/1. 
-  
-  The analytic code is available at (LINK). This manuscript is available under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) at (LINK). Researchers can contact Facebook (ccobb@fb.com) to access our code, the Facebook data, and a synthetic version of the Gallup data for reproducing and extending our analyses.
-  This study and methodology was reviewed and approved by the Oxford Internet Institute's Departmental Research Ethics Committee (SSH_OII_CIA_21_084). The authors declare no conflicts of interest.
+# For footer text
+lead_author_surname: Vuorre
 
-abstract: | 
-  \textbf{Abstract} Although social media's potential effects on well-being have received considerable research interest, much of past work is hampered by an exclusive focus on demographics in the Global North and the use of inaccurate self-reports. We describe associations linking 72 countries' Facebook adoption to the well-being of 946,798 individuals from 2008 to 2019. We found no associations suggesting that the global penetration of social media has caused widespread psychological harm: Facebook adoption predicted life satisfaction and positive experiences positively, and negative experiences negatively, both between countries and within countries but over time. Facebook adoption was more positively associated with well-being for younger individuals, but country-specific results were mixed. In order to move beyond studying aggregates and to better understand social media's causal effects, we need more transparent collaborative research between independent scientists and the technology industry.
-  
-  \textbf{Significance statement} Billions of individuals across the globe use social media on a regular basis. The widespread adoption of social media---most prominently Facebook---has fundamentally shifted how humans conduct their lives. Consequently, researchers, healthcare professionals, and policy makers have repeatedly raised alarms that the spread of social media may be negatively affecting individuals, particularly young ones, mental health and well-being on a global scale. We examined the plausibility of this idea by associating 72 nations' yearly Facebook adoption rates to the well-being of 946,798 individuals from 2008 to 2019. Overall, we found that increased rates of daily and monthly active Facebook users predicted greater levels of well-being, when comparing countries to other countries, or countries to themselves but over time. These findings should guide debate surrounding social media towards more empirical foundations: The importance of this topic requires that independent scientists gain access to more detailed data from the technology industry in order to better determine how and why modern online platforms might be affecting their users.
-  
-keywords: well-being, social media
-# wordcount: 
-bibliography: "references.bib"
-floatsintext: yes
-linenumbers: no
-draft: no
-mask: no
-figurelist: no
-tablelist: no
-footnotelist: no
-header-includes:
-  - |
-    \setlength{\parskip}{2pt}
-    \setlength\parindent{24pt}
 
-csl: "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
-documentclass: apa7
-classoption: jou
+author_contributions: |
+  The authors made the following contributions. Matti Vuorre: Design, Administration, Analysis, Visualization, Writing; Andrew K. Przybylski: Design, Administration, Funding, Resources, Super- vision, Visualization, Writing.
+
+## Remove this if not required
+conflict_of_interest: |
+  The authors declare no conflicts of interest.
+
+abstract: |
+  Social media's potential effects on well-being have received considerable research interest, but much of past work is hampered by an exclusive focus on demographics in the Global North and inaccurate self-reports of social media engagement. We describe associations linking 72 countries' Facebook adoption to the well-being of 946,798 individuals from 2008 to 2019. We found no associations suggesting that the global penetration of social media has caused widespread psychological harm: Facebook adoption predicted life satisfaction and positive experiences positively, and negative experiences negatively, both between countries and within countries but over time. Facebook adoption was more positively associated with well-being for younger individuals, but country-specific results were mixed. In order to move beyond studying aggregates and to better understand social media's causal effects, we need more transparent collaborative research between independent scientists and the technology industry.
+
+
+significance: |
+  Billions of individuals across the globe use social media on a regular basis. The widespread adoption of social media---most prominently Facebook---has fundamentally shifted how humans conduct their lives. Consequently, researchers, healthcare professionals, and policy makers have repeatedly raised alarms that the spread of social media may be negatively affecting individuals, particularly young ones, mental health and well-being on a global scale. We examined the plausibility of this idea by associating 72 nations' yearly Facebook adoption rates to the well-being of 946,798 individuals from 2008 to 2019. Overall, we found that increased rates of daily and monthly active Facebook users predicted greater levels of well-being, when comparing countries to other countries, or countries to themselves but over time. These findings should guide debate surrounding social media towards more empirical foundations: The importance of this topic requires that independent scientists gain access to more detailed data from the technology industry in order to better determine how and why modern online platforms might be affecting their users.
+
+# acknowledgements: |
+#   Please include your acknowledgments here, set in a single paragraph. Please do not include any acknowledgments in the Supporting Information, or anywhere else in the manuscript.
+
+keywords:
+  - well-being
+  - social media
+
+## must be one of: pnasresearcharticle (usual two-column layout), pnasmathematics (one column layout), or pnasinvited (invited submissions only)
+pnas_type: pnasresearcharticle
+
+bibliography: references.bib
+csl: pnas.csl
+
+## change to true to add optional line numbering
+lineno: true
+
 output: 
-  papaja::apa6_pdf:
-    number_sections: false
+  rticles::pnas_article:
     keep_tex: false
-  papaja::apa6_docx: 
-    number_sections: false
-always_allow_html: true
 ---
 
 ```{r setup, include = FALSE}
@@ -79,6 +62,7 @@ library(knitr)
 library(patchwork)
 library(ggh4x)
 library(brms)
+library(kableExtra)
 library(ggstance)
 library(bayestestR)
 library(tidyverse)
@@ -90,6 +74,7 @@ dir.create("models", FALSE)
 opts_chunk$set(
   eval = TRUE,
   cache = TRUE,
+  echo = FALSE,
   include = FALSE,
   warning = FALSE,
   dpi = 300,
@@ -289,11 +274,12 @@ if (!file.exists(path)) {
 
 The ways in which people use technology for most domains in life has changed dramatically since the mass introduction of the internet in the 1990s, and the subsequent technologies facilitated by it. Most prominently, the popularization of modern social media platforms in 2008 precipitated widespread changes to human activities via features such as marketplaces, personalized news feeds, photo sharing, live streaming, and other features that the "metaverse" promises to build on. The first social media with global adoption, MySpace (launched 2003) saw 115 million users in 2008---the year in which it was replaced as the leading platform by Facebook (2004). Today (2022-Q1), Facebook reports 2.94 billion monthly active users [@metaMetaReportsFirst2022], or about one third of the global population. Along with social media's global penetration, debate surrounding their potential effects on individual and collective well-being has intensified.
 
-Although reports of negative psychological outcomes associated social media are common in academic writing [@krossFacebookUsePredicts2013] and popular media [@thompsonSocialMediaAttention2021], evidence for harms is, on balance, more speculative than conclusive [@bestOnlineCommunicationSocial2014; @dickson2018screen; @odgersAnnualResearchReview2020; @ophirNewMediaScreenTime2020]. Recent results on the associations between social media use and well-being are mixed and shown to critically depend on arbitrary analytic choices [@orbenSocialMediaEnduring2019]. Other studies have reported that there have been few if any changes in associations linking technology use to mental health in this period of social media's global adoption [@vuorreThereNoEvidence2021]. A general lack of validated measures, poorly specified causal models, and inadequate data have yielded a large number of low quality studies [@parrySystematicReviewMetaanalysis2021; @sewallDoesObjectivelyMeasured2022]. Furthermore, because nearly all investigations have focused on samples from the Global North [@ghaiSocialMediaAdolescent2022], we have next to no idea of how the wide adoption of social media platforms relates to psychological well-being across the world.
+Although reports of negative psychological outcomes associated social media are common in academic writing [@krossFacebookUsePredicts2013] and popular media [@thompsonSocialMediaAttention2021], evidence for harms is, on balance, more speculative than conclusive [@bestOnlineCommunicationSocial2014; @dickson2018screen; @odgersAnnualResearchReview2020]. Recent results on the associations between social media use and well-being are mixed and depend on arbitrary analytic choices [@orbenSocialMediaEnduring2019]. Other studies have reported that there have been few if any changes in associations linking technology use to mental health in this period of social media's global adoption [@vuorreThereNoEvidence2021]. A general lack of validated measures, poorly specified causal models, and inadequate data have yielded a large number of low-quality studies [@parrySystematicReviewMetaanalysis2021; @sewallDoesObjectivelyMeasured2022]. Furthermore, because nearly all investigations have focused on samples from the Global North [@ghaiSocialMediaAdolescent2022], we have next to no idea of how the wide adoption of social media platforms relates to psychological well-being across the world.
 
-To better understand the plausible range of associations, we linked data tracking Facebook's global adoption with three indicators of global well-being. We examined 72 countries' per capita daily active Facebook users (DAU) in two age brackets (13-34 and 35+ years) as predictors of life satisfaction (LS), negative (NE), and positive psychological experiences (PE) at the level of years spanning 2008 to 2019. The well-being data represented 946,798 individuals' responses from the nationally representative Gallup World Poll Survey [@gallupHowDoesGallup2014]. We joined these unique datasets to conduct a descriptive study to answer three basic yet important questions: First, to what extent did Facebook adoption predict well-being? Second, do these associations differ by age or sex. And finally, to what extent might these associations have differed between countries?
+To better understand the plausible range of associations, we linked data tracking Facebook's global adoption with three indicators of global well-being. We examined 72 countries' per capita daily active Facebook users (DAU) in two age brackets (13-34 and 35+ years) as predictors of life satisfaction (LS), negative (NE), and positive psychological experiences (PE) at the level of years spanning 2008 to 2019. The well-being data represented 946,798 individuals' responses from the nationally representative Gallup World Poll Survey [@gallupHowDoesGallup2014]. We joined these unique datasets to conduct a descriptive study to answer three basic yet important questions: First, to what extent did Facebook adoption predict well-being? Second, do these associations differ by age or sex. And finally, how might these associations have differed between countries?
 
 ```{r tab-world}
+#| echo: false
 #| include: true
 
 # Average within- and between-country associations
@@ -355,11 +341,12 @@ tmp <- d_fb %>%
 tmp
 ```
 
-```{r fig-data}
+Facebook adoption increased markedly from 2008 when the median per capita DAU across these 72 countries was `r tmp[1,2]` (ages 13-34) and `r tmp[1,3]`% (35+), to `r tmp[12,2]` (13-34) and `r tmp[12,3]` (35+; Figure 1A) in 2019. During this period Facebook adoption by younger individuals plateaued before saturation in many countries, but not for older individuals. At the same time, we did not observe correspondingly large and uniform changes across measures of well-being (Figure 1B) [@vuorreGlobalWellbeingMental2022].
+
+```{r fig-data, fig.pos = "H"}
 #| include: true
-#| out.width: "\\textwidth"
-#| fig.env: "figure*"
-#| fig.height: 5
+#| fig.height: 3.6
+#| fig.width: 3.5
 #| fig.cap: "A. 72 countries' daily active Facebook users in two age brackets from 2008 to 2019. (Percentages may exceed 100\\% due to inaccurate estimation of either DAU or population size.) B. The same 72 countries' mean responses to three well-being scales in the Gallup World Poll from 2008 to 2019, separated by age category and sex. LS: Life satisfaction, NE: Negative experiences: PE: Positive experiences."
 
 # Figure of all variables over time
@@ -383,7 +370,8 @@ p_a <- d_fb %>%
   theme(
     legend.position = "none",
     axis.title.x = element_blank()
-  )
+  ) +
+  theme(text = element_text(size = 5)) 
 
 p_b <- d %>% 
   # Exclude rows where FB data existed but not GWP data
@@ -392,9 +380,9 @@ p_b <- d %>%
   mutate(age = factor(age, labels = c("15-34", "35+"))) %>% 
   mutate(
     outcome = case_when(
-      outcome == "Life_satisfaction" ~ "LSAT",
-      outcome == "Negative_experiences" ~ "NPE",
-      outcome == "Positive_experiences" ~ "PPE"
+      outcome == "Life_satisfaction" ~ "LS",
+      outcome == "Negative_experiences" ~ "NE",
+      outcome == "Positive_experiences" ~ "PE"
     )
   ) %>% 
   mutate(panel = str_glue("{age} ({sex})")) %>% 
@@ -411,13 +399,14 @@ p_b <- d %>%
     breaks = seq(2008, 2018, by = 2),
     labels = ~str_replace(., "20", "'")
   ) +
-  geom_line(size = .125) +
+  geom_line(size = .1) +
   facet_grid(
     outcome~panel, 
     scales = "free_y",
     labeller = as_labeller(~str_replace(., "_", " "))
   ) +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  theme(text = element_text(size = 5)) 
 
 
 (p_a / p_b) +
@@ -425,15 +414,13 @@ p_b <- d %>%
   plot_annotation(tag_levels = "A")
 ```
 
-Facebook adoption increased markedly from 2008 when the median per capita DAU across these 72 countries was `r tmp[1,2]` (ages 13-34) and `r tmp[1,3]`% (35+), to `r tmp[12,2]` (13-34) and `r tmp[12,3]` (35+; Figure \@ref(fig:fig-data)A) in 2019. During this period Facebook adoption by younger individuals plateaued before saturation in many countries, but not for older individuals. At the same time, we did not observe correspondingly large and uniform changes across measures of well-being (Figure \@ref(fig:fig-data)B) [@vuorreGlobalWellbeingMental2022].
+To answer our first question of how Facebook adoption relates to well-being, we specified a multilevel linear meta-regression model of each well-being outcome on time, sex, age, and DAU (both within- and between-country-centered, see SI). We included all interactions between sex, age, and time, and sex, age, and DAU (within-country-centered), and allowed all parameters to vary randomly across countries. We first examined whether the relative standing of countries on their average Facebook adoption predicted well-being (the model's between-country associations). We found that countries with greater average DAU had somewhat higher levels of life satisfaction and positive experiences, and lower levels of negative experiences than countries with lower DAU (Table 1). However, there are large and important differences between countries in factors that might underlie differences in both social media adoption and well-being, such as socioeconomic conditions. As such, while descriptively informative, these associations are likely to indicate between-country confounding factors.
 
-To answer our first question of how Facebook adoption might relate to well-being, we specified a Bayesian multilevel linear meta-regression model of each well-being outcome on time, sex, age, and DAU (both within- and between-country-centered, see SI). We included all interactions between sex, age, and time, and sex, age, and DAU (within-country-centered), and allowed all parameters to vary randomly across countries. We first examined whether the relative standing of countries on their average Facebook adoption predicted well-being (the model's between-country associations). We found that countries with greater average DAU had somewhat higher levels of life satisfaction and positive experiences, and lower levels of negative experiences than countries with lower DAU (Table \@ref(tab:tab-world)). However, there are large and important differences between countries in factors that might underlie differences in both social media adoption and well-being, such as socioeconomic conditions. As such, while descriptively informative, these associations are likely to indicate between-country confounding factors.
-
-```{r fig-forest}
+```{r fig-forest, fig.pos="H"}
+#| echo: false
 #| include: true
-#| out.width: "\\textwidth"
-#| fig.env: "figure*"
-#| fig.height: 4.6
+#| fig.height: 4.2
+#| fig.width: 3.5
 #| fig.cap: "Forest plot of estimated associations between country-year level per-capita daily active Facebook users (DAU) and life satisfaction (LS), negative experiences (NE), and positive experiences (PE). Units indicate percentage change in outcome as function of percentage increase in within-country centered DAU. Filled points indicate estimates whose posterior 95\\%CI excluded zero. See the online supplementary materials for corresponding figure but with MAU as predictor."
 
 tmp <- coefs %>%   
@@ -498,16 +485,21 @@ tmp %>%
     shape = guide_legend(override.aes = list(size = 1.5))
   ) +
   theme(
-    axis.text.y = element_text(size = rel(0.7)),
+    text = element_text(size = 5),
+    axis.text.y = element_text(size = rel(0.9)),
     axis.title.y = element_blank(),
     panel.grid.major.y = element_line(
       size = .1, linetype = 2, color = "gray60"
     ),
-    legend.position = "right"
+    legend.position = "bottom", 
+    legend.box.margin = margin(-15, 0, -10, 0, "pt"),
+    legend.background = element_rect(fill = NA),
+    legend.key = element_rect(fill = NA),
+    legend.text = element_text(size = rel(0.9))
   )
 ```
 
-Variations in such confounding factors are likely to be significantly smaller within countries over time. We therefore next focused on the model's within-country associations, which measure the extent to which Facebook adoption in a given country predicted well-being in that country adjusting for general linear temporal trends in the well-being outcome. On average across countries, age, and sex, we found that years with greater than the average country's average DAU were associated with greater levels of life satisfaction and positive experiences, and lower levels of negative experiences (Table \@ref(tab:tab-world)). For the average country in our sample of 72, Facebook adoption positively predicted well-being. While these associations indicate relations within countries and adjust for confounders that vary linearly with time, by including time as a predictor, they are still susceptible to confounders and do not indicate causal relations. Rather, this association describes the fact that, all else being equal, years with greater Facebook adoption tended to be those with greater levels of well-being.
+Variations in such confounding factors are likely to be significantly smaller within countries over time. We therefore next focused on the model's within-country associations, which measure the extent to which Facebook adoption in a given country predicted well-being in that country adjusting for general linear temporal trends in the well-being outcome. On average across countries, age, and sex, we found that years with greater than the average country's average DAU were associated with greater levels of life satisfaction and positive experiences, and lower levels of negative experiences (Table 1). For the average country in our sample, Facebook adoption positively predicted well-being. While these associations indicate relations within countries and adjust for confounders that vary linearly with time, by including time as a predictor, they are still susceptible to confounders and do not indicate causal relations. Rather, this association describes the fact that, all else being equal, years with greater Facebook adoption tended to be those with greater levels of well-being.
 
 ```{r demographics}
 coefs %>% 
@@ -541,7 +533,7 @@ tab_demo <- coefs %>%
 tab_demo
 ```
 
-We then turned to our second question and assessed whether within-country associations linking Facebook adoption to well-being differed between the demographic groups. Differences in the association linking Facebook adoption and well-being were greater between the younger and older demographics than they were between females and males (Figure \@ref(fig:fig-forest), Average). DAU predicted life satisfaction more positively in the younger age bracket, but these estimates' CIs did not exclude zero. DAU predicted negative experiences negatively in the younger age group, but positively for older males. These differences were less pronounced for positive experiences, which were positively associated with DAU only in the 13-34 year old male group. These results show that Facebook adoption was, for the average nation in our sample, more positively predictive of well-being for individuals below 35, and that differences between males and females were generally smaller than those between age groups.
+We then turned to our second question and assessed whether within-country associations linking Facebook adoption to well-being differed between the demographic groups. Differences in the association linking Facebook adoption and well-being were greater between the younger and older demographics than they were between females and males (Figure 2, Average). DAU predicted life satisfaction more positively in the younger age bracket, but these estimates' CIs did not exclude zero. DAU predicted negative experiences negatively in the younger age group, but positively for older males. These differences were less pronounced for positive experiences, which were positively associated with DAU only in the 13-34 year old male group. These results show that Facebook adoption was, for the average nation in our sample, more positively predictive of well-being for individuals below 35, and that differences between males and females were generally smaller than those between age groups.
 
 ```{r}
 # Can we show regions in the forest plot as secondary axis? 
@@ -564,7 +556,7 @@ coefs %>%
   select(outcome, country, Estimate:CI.Upper)
 ```
 
-However, while informative aggregates, these results do not describe associations between Facebook adoption and well-being for any individual country, but rather their averages. To answer our third question, we computed country-specific estimates for each sex and age group (Figure \@ref(fig:fig-forest)). On average, for life satisfaction, `r tmp[1, 5]` countries credibly positive associations. For negative experiences, `r tmp[2, 6]` countries had a credibly negative association, and `r tmp[3, 5]` countries had a credibly positive association between DAU and positive experiences. There were no credible (at the 95% level) country-level negative associations between DAU and life-satisfaction. Although many country-level estimates were uncertain, these results aligned with the general pattern of positive associations between Facebook adoption and country-level well-being.
+However, while informative aggregates, these results do not describe associations between Facebook adoption and well-being for any individual country, but rather their averages. To answer our third question, we computed country-specific estimates for each sex and age group (Figure 2). On average, for life satisfaction, `r tmp[1, 5]` countries credibly positive associations. For negative experiences, `r tmp[2, 6]` countries had a credibly negative association, and `r tmp[3, 5]` countries had a credibly positive association between DAU and positive experiences. There were no credible (at the 95% level) country-level negative associations between DAU and life-satisfaction. Although many country-level estimates were uncertain, these results aligned with the general pattern of positive associations between Facebook adoption and country-level well-being.
 
 ```{r fig-ce-prepare}
 #| eval: false
@@ -645,11 +637,11 @@ newy %>%
   theme(legend.position = "none")
 ```
 
-We found that, on the whole, Facebook adoption positively predicted well-being. This association held when comparing countries to other countries, and individual countries over time. While these descriptive results do not speak to causal effects, they align with other recent findings suggesting that technology has not become increasingly harmful over time [@vuorreThereNoEvidence2021], and that increased adoption of general internet technologies are not, overall, associated with psychological harms [@vuorreGlobalWellbeingMental2022]. That said, these conclusions are qualified because our focus on daily active users could miss those who use Facebook less regularly. To test this idea, we also conducted our analyses using monthly active Facebook users (MAU) as the predictor. Those results were substantively the same (see online supplement).
+We found that, overall, Facebook adoption positively predicted well-being. This association held when comparing countries to other countries and to themselves over time. While these descriptive results do not speak to causal effects, they align with other recent findings suggesting that technology has not become increasingly harmful over time [@vuorreThereNoEvidence2021], and that increased adoption of general internet technologies are not, overall, associated with psychological harms [@vuorreGlobalWellbeingMental2022]. That said, these conclusions are qualified because our focus on daily active users could miss those who use Facebook less regularly. To test this possibility, we also conducted our analyses using monthly active Facebook users (MAU) as the predictor. Those results were substantively the same (see online supplement).
 
 It is widely accepted that social media and the Internet more broadly have changed how humans socialize, organize, and seek leisure, but it is not obvious or necessary that their wide adoption has influenced well-being. In this study we used the best data available to describe how global Facebook adoption relates to well-being across 72 countries over a 12-year period. We found generally positive associations between Facebook adoption and well-being which were partially qualified by demographics and not uniform across countries. 
 
-We did not find evidence that increased social media adoption is consistently negatively associated with well-being. Nevertheless, our analyses cannot and do not rule out that possibility because more fine-grained data needed to do so either do not exist or are not available. If we are to move past description to prediction or intervention, independent scientists and online platforms will need to collaborate in new, transparent ways. As it stands now, only a handful of scientists working in the technology industry have the data needed to advance this line of inquiry. If we are to understand and improve well-being in the digital age, this must change.
+We did not find evidence that increased social media adoption is consistently negatively associated with well-being. Nevertheless, our analyses cannot and do not rule out that possibility because more fine-grained data needed to demonstrate this more conclusively either do not exist or are not available. If we are to move past description to prediction or intervention, independent scientists and online platforms will need to collaborate in new, transparent ways. As it stands now, only a handful of scientists working in the technology industry have the data required to advance this line of inquiry. If we are to understand and improve well-being in the digital age, this must change.
 
 # References
 
@@ -671,7 +663,7 @@ countries[length(countries)] <- paste("and", countries[length(countries)])
 countries <- str_c(countries, collapse = ", ")
 ```
 
-We studied two metrics of Facebook adoption, daily (DAU) and monthly active users (MAU), from 2008 to 2019 for 72 countries (see Figure \@ref(fig:fig-forest)). FB estimates yearly DAU & MAU with their corresponding means from June 1 to August 31, and rounds values greater than 10,000,000 to three significant digits, and values less than 10,000,000 to the nearest 10,000. We report analyses based on DAU in the main manuscript, and MAU in the online supplement. DAU and MAU estimates are calculated separately for individuals aged 13-34 and 35+. User age is determined based on Facebook profile information, which can be inaccurate (e.g. young individuals report an older age.) Accordingly, 0.008% of total MAU were trimmed to exclude accounts with unrealistic on non-reported age. 
+We studied two metrics of Facebook adoption, daily (DAU) and monthly active users (MAU), from 2008 to 2019 for 72 countries (see Figure 2). FB estimates yearly DAU & MAU with their corresponding means from June 1 to August 31, and rounds values greater than 10,000,000 to three significant digits, and values less than 10,000,000 to the nearest 10,000. We report analyses based on DAU in the main manuscript, and MAU in the online supplement. DAU and MAU estimates are calculated separately for individuals aged 13-34 and 35+. User age is determined based on Facebook profile information, which can be inaccurate (e.g. young individuals report an older age.) Accordingly, 0.008% of total MAU were trimmed to exclude accounts with unrealistic on non-reported age. 
 
 In personal communication, Facebook representatives explained the selection of countries as "The countries provided were selected based upon geographic and cultural diversity and criteria related to data quality, including that geographic and age attribution error is believed to be relatively small." A given user's country is determined based on a number of factors, including the user's IP address and self-reported location.
 
@@ -707,7 +699,7 @@ We examined the association between Facebook adoption and well-being through bay
 
 $$
 \begin{aligned} 
-y_i &\sim \text{Normal}(\mu_i, \sigma^{y2}v_i) \\
+y_i &\sim \text{Normal}(\mu_i, \sigma^{y2}v_i), \\
 \mu_i &= \alpha_{0} + \beta_{0\text{country}[i]} + \\
 &\quad\ (\alpha_{1} + \beta_{1\text{country}[i]})\text{Sex}_i + \\
 &\quad\ (\alpha_{2} + \beta_{2\text{country}[i]})\text{Age}_i + \\
@@ -720,9 +712,9 @@ y_i &\sim \text{Normal}(\mu_i, \sigma^{y2}v_i) \\
 &\quad\ (\alpha_{9} + \beta_{9\text{country}[i]})\text{Sex}_i \times \text{DAU}^{\text{CW}}_i + \\
 &\quad\ (\alpha_{10} + \beta_{10\text{country}[i]})\text{Age}_i \times \text{DAU}^{\text{CW}}_i + \\
 &\quad\ (\alpha_{11} + \beta_{11\text{country}[i]})\text{Sex}_i \times \text{Age}_i \times \text{DAU}^{\text{CW}}_i + \\
-&\quad\ \alpha_{12} \text{DAU}^{\text{CB}}_i
+&\quad\ \alpha_{12} \text{DAU}^{\text{CB}}_i,
 \\
-\pmb{\beta} &\sim \text{MVN}(\pmb{0}, \Sigma)
+\pmb{\beta} &\sim \text{MVN}(\pmb{0}, \Sigma).
 \end{aligned}
 $$
 
@@ -730,7 +722,12 @@ Where $y_i$ is the outcome (e.g. life satisfaction) on row $i$, $v_i$ its sampli
 
 We conducted all data analyses with the R language for statistical computing [@rcoreteamLanguageEnvironmentStatistical2021] and estimated the models using Stan’s Hamiltonian Monte Carlo sampling via the brms R package [@burknerBrmsPackageBayesian2017]. We used default noninformative priors, 4 HMC chains with 4,000 iterations and first 2,000 as warmup for 8,000 total iterations; we report all parameters with their posterior means and 95% credible intervals (posterior 2.5 and 97.5 percentiles; CI), and other posterior probabilities as indicated in text.
 
-\newpage
+<!-- Leave these lines as they are at the end of your .Rmd file to ensure placement of methods & acknowledgements sections before the references-->
+\showmatmethods
+<!-- \showacknow -->
+\pnasbreak
+
+\clearpage
 
 # Online supplement to The association between Facebook adoption and well-being (Vuorre and Przybylski): Monthly active users
 
@@ -743,16 +740,15 @@ We conducted all data analyses with the R language for statistical computing [@r
 
 In the main document, we analysed associations between well-being and daily active Facebook users (DAU). Here, we repeat those analyses but use monthly active users (MAU) as the predictor
 
-```{r fig-data-mau}
+```{r fig-data-mau, fig.pos="H"}
 #| include: true
-#| out.width: "\\textwidth"
-#| fig.env: "figure*"
-#| fig.height: 2.3
+#| fig.height: 1.4
+#| fig.width: 3.5
 #| fig.cap: "72 countries' monthly active Facebook users in two age brackets from 2008 to 2019. (Percentages may exceed 100\\% due to inaccurate estimation of either DAU or population size.) "
 p_a + aes(y = mau)
 ```
 
-Figure \@ref(fig:fig-data-mau) shows that the trends of Facebook adoption observed for DAU for mostly similar for MAU, but the overall rates were somewhat greater. We estimated the same model as in the main analyses; the key association parameters are shown in Table \@ref(tab:tab-world-mau). Overall, the results were qualitatively similar, but the associations with MAU tended to be smaller. In addition the within-country associations between life satisfaction and negative experiences and MAU were no longer credible at the 95% level.
+Figure S1 shows that the trends of Facebook adoption observed for DAU for mostly similar for MAU, but the overall rates were somewhat greater. We estimated the same model as in the main analyses; the key association parameters are shown in Table S1. Overall, the results were qualitatively similar, but the associations with MAU tended to be smaller. In addition the within-country associations between life satisfaction and negative experiences and MAU were no longer credible at the 95% level.
 
 ```{r tab-world-mau}
 #| include: true
@@ -776,13 +772,13 @@ tab_world %>%
   )
 ```
 
-Overall, the average results across demographics mirrored those with DAU (Figure \@ref(fig:fig-forest-mau)). However, many of the country-specific associations differed (individual countries in Figure \@ref(fig:fig-forest-mau)). In sum, these results suggest that for associations at the level of countries, the aggregate intensity of use (monthly or daily) did not play a large role.
+Overall, the average results across demographics mirrored those with DAU (Figure S2). However, many of the country-specific associations differed (individual countries in Figure S2). In sum, these results suggest that for associations at the level of countries, the aggregate intensity of use (monthly or daily) did not play a large role.
 
-```{r fig-forest-mau}
+```{r fig-forest-mau, fig.pos="H"}
+#| echo: false
 #| include: true
-#| out.width: "\\textwidth"
-#| fig.env: "figure*"
-#| fig.height: 4.6
+#| fig.height: 4.2
+#| fig.width: 3.5
 #| fig.cap: "Forest plot of estimated associations between country-year level per-capita monthly active Facebook users (MAU) and life satisfaction (LS), negative experiences (NE), and positive experiences (PE). Units indicate percentage change in outcome as function of percentage increase in within-country centered MAU. Filled points indicate estimates whose posterior 95\\%CI excluded zero."
 
 tmp <- coefs %>%   
@@ -847,12 +843,16 @@ tmp %>%
     shape = guide_legend(override.aes = list(size = 1.5))
   ) +
   theme(
-    # axis.ticks.y = element_blank(),
-    axis.text.y = element_text(size = rel(0.7)),
+    text = element_text(size = 5),
+    axis.text.y = element_text(size = rel(0.9)),
     axis.title.y = element_blank(),
     panel.grid.major.y = element_line(
       size = .1, linetype = 2, color = "gray60"
     ),
-    legend.position = "right"
+    legend.position = "bottom", 
+    legend.box.margin = margin(-15, 0, -10, 0, "pt"),
+    legend.background = element_rect(fill = NA),
+    legend.key = element_rect(fill = NA),
+    legend.text = element_text(size = rel(0.9))
   )
 ```
