@@ -4,7 +4,7 @@ Code supporting *Estimating the association between Facebook adoption and well-b
 
 This project uses proprietary data which cannot be shared. All the code used to analyse those data are here. This code was used in FB's research environment (FORT). To reproduce our analyses with actual Facebook and synthetic Gallup data, contact Facebook at <ccobb@fb.com> or <ss1-tech-support@fb.com>.
 
-Manuscript draft is `ms.pdf`.
+Open code and synthetic datasets: [![DOI](https://zenodo.org/badge/525367459.svg)](https://zenodo.org/badge/latestdoi/525367459)
 
 - `data-prepare.Rmd`
   - Creates clean Gallup and and population datasets, and a synthetic Gallup dataset, to be uploaded to FORT
