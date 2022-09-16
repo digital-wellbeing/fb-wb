@@ -1,5 +1,5 @@
 ---
-title: Estimating the association between Facebook adoption and well-being
+title: Estimating the association between Facebook adoption and well-being in 72 countries
 
 # Use letters for affiliations, numbers to show equal authorship (if applicable) and to indicate the corresponding author
 author:
@@ -482,7 +482,7 @@ coefs %>%
 
 However, while informative aggregates, these results do not describe associations between Facebook adoption and well-being for any individual country, but rather their averages. To answer our third question, we computed country-specific estimates for each sex and age group (Figure 2). For life satisfaction, `r tmp[1, 5]` countries had credibly positive average associations. For negative experiences, `r tmp[2, 6]` countries had credibly negative average association, and `r tmp[3, 5]` countries had a credibly positive average association between DAU and positive experiences. There were no credible (at the 95% level) country-level negative associations between DAU and life-satisfaction. Although many country-level estimates were uncertain, these results aligned with the general pattern of positive associations between Facebook adoption and country-level well-being.
 
-We found that, overall, Facebook adoption positively predicted well-being. This association held when comparing countries to other countries and to themselves over time. While these descriptive results do not speak to causal effects, they align with other recent findings suggesting that technology has not become increasingly harmful over time [@vuorreThereNoEvidence2021], and that the increased adoption of Internet technologies is not, overall, associated with widespread psychological harms [@vuorreGlobalWellbeingMental2022]. That said, these conclusions are qualified because our focus on daily active users could miss those who use Facebook less regularly. To test this possibility, we also conducted our analyses using monthly active Facebook users (MAU) as the predictor. Those results were substantively the same (see online supplement).
+We found that, overall, Facebook adoption positively predicted well-being. This association held when comparing countries to other countries and to themselves over time. While these descriptive results do not speak to causal effects, they align with other recent findings suggesting that technology has not become increasingly harmful over time [@vuorreThereNoEvidence2021], and that the increased adoption of Internet technologies is not, overall, associated with widespread psychological harms [@vuorreGlobalWellbeingMental2022]. That said, these conclusions are qualified because our focus on daily active users could miss those who use Facebook less regularly. To test this possibility, we also conducted our analyses using monthly active Facebook users (MAU) as the predictor. Those results were substantively the same (see online analysis supplement; <https://doi.org/10.5281/zenodo.7086277>).
 
 ```{r fig-forest, fig.pos="H"}
 #| echo: false
@@ -581,7 +581,7 @@ We did not find evidence that increased social media adoption is consistently ne
 
 ## Data availability
 
-Both datasets (Facebook and Gallup) are proprietary and we therefore could not share them with this manuscript. Our analytic code, along with synthetic datasets, is available at (LINK). Researchers can contact Facebook (ccobb@fb.com) to reproduce our analyses with the actual Facebook adoption dataset. The Gallup data are available online to subscribing institutions.
+Both datasets (Facebook and Gallup) are proprietary and we therefore could not share them with this manuscript. Our analytic code, along with synthetic datasets and an online analysis supplement, is available at <https://doi.org/10.5281/zenodo.7086277>. Researchers can contact Facebook (ccobb@fb.com) to reproduce our analyses with the actual Facebook adoption dataset. The Gallup data are available online to subscribing institutions.
 
 ## Facebook data
 
