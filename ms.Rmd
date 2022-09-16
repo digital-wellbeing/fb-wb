@@ -49,9 +49,7 @@ csl: pnas.csl
 ## change to true to add optional line numbering
 lineno: true
 
-output: 
-  rticles::pnas_article:
-    keep_tex: false
+output: rticles::pnas_article
 ---
 
 \raggedbottom
@@ -103,13 +101,13 @@ theme_set(
 ```{r data-prepare}
 # Load and merge data
 # Facebook -- this data only exists on FORT
-d_fb <- read_csv("data/fb.csv")
+d_fb <- read_csv("data-raw/fb.csv")
 # If you are not conducting these analyses on FORT, the above data is not 
 # available. Uncomment below to use a synthetic dataset instead.
 # d_fb <- read_csv("data/fb-SYNTHETIC.csv")  # If real FB data not available
 
 # Gallup
-d_gwp <- read_rds("data/gwp.rds") 
+d_gwp <- read_rds("data-raw/gwp.rds") 
 # d_gwp <- read_rds("data/gwp-SYNTHETIC.rds") # If real Gallup data not available
 
 # Population estimates

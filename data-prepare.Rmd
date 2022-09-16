@@ -256,6 +256,6 @@ if (!file.exists(fb_mock_path)) {
 ```{r gallup-save}
 # Save
 dir.create("data", FALSE)
-write_rds(gwp, "data/gwp.rds")
+write_rds(gwp, "data-raw/gwp.rds")
 write_rds(pop, "data/population.rds")
 ```
