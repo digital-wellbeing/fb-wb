@@ -5,6 +5,9 @@
 
 data-raw/
 *.xlsx
+*.docx
+*.log
 models*/
 *_cache/
 *_files/
+/diagnostics/

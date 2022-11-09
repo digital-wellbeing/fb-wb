@@ -180,6 +180,84 @@ if (!file.exists(gwp_mock_path)) {
 }
 ```
 
+## GBD
+
+```{r}
+# Load data files and merge to one table
+gbd <- list.files(
+  here("data-raw/GBD/"),
+  pattern = ".zip", full.names = TRUE, recursive = TRUE
+) %>%
+  read_csv()
+
+# First step is to clean names and remove unnecessary variables
+gbd <- clean_names(gbd)
+# distinct(gbd, measure, metric)
+gbd <- select(gbd, -measure, -metric)
+
+# Clean cause names
+# distinct(gbd, cause)
+gbd <- gbd %>%
+  mutate(
+    cause = case_when(
+      cause == "Anxiety disorders" ~ "Anxiety",
+      cause == "Depressive disorders" ~ "Depression",
+      cause == "Self-harm" ~ "Selfharm"
+    )
+  )
+
+# Harmonise variable names with other datasets
+gbd <- gbd %>%
+  rename(country = location, outcome = cause)
+
+# The outcomes values are model predictions and come with lower and upper CI limits (2.5 and 97.5 %iles of their posterior distributions). We convert those to normal approximate standard errors.
+gbd <- gbd %>%
+  mutate(se = (upper - lower) / (1.96 * 2)) %>%
+  select(-c(upper, lower))
+
+# Harmonise old names and replace only if harmonised name found
+gbd <- gbd %>%
+  mutate(
+    country_harmonised = countryname(
+      country,
+      destination = "cldr.short.en"
+    )
+  ) %>%
+  # This picks the harmonised name if exists, otherwise original name
+  mutate(country = coalesce(country_harmonised, country)) %>%
+  select(-country_harmonised)
+
+# Include only FB years and countries
+gbd <- gbd %>% 
+  filter(country %in% fb_countries) %>% 
+  filter(between(year, 2008, 2019))
+
+# Categorize ages
+gbd <- gbd %>%
+  mutate(
+    age = factor(
+      if_else(
+        age %in% c("10 to 14", "15 to 19", "20 to 24", "25 to 29", "30 to 34"), 
+        "13-34", 
+        "35+"
+      )
+    )
+  )
+```
+
+
+```{r}
+# Aggregate to new age groups
+gbd <- gbd %>% 
+  group_by(country, year, sex, age, outcome) %>%
+  summarise(
+    val = mean(val, na.rm = TRUE),
+    se = sqrt(mean(se^2))  # average standard error
+  ) %>%
+  ungroup()
+```
+
+
 ## Population
 
 From <https://population.un.org/wpp/Download/Standard/Population/>.
@@ -192,7 +270,7 @@ pop <- read_excel(
   skip = 16,
   col_types = "text",
   .name_repair = make_clean_names
-  )
+)
 pop <- pop %>% 
   drop_na(iso3_alpha_code) %>% 
   select(
@@ -203,7 +281,8 @@ pop <- pop %>%
       iso3_alpha_code, 
       origin = "iso3c", 
       destination = "cldr.short.en"
-    )
+    ),
+    year = as.numeric(year)
   )
 pop <- pop %>% 
   filter(
@@ -257,5 +336,6 @@ if (!file.exists(fb_mock_path)) {
 # Save
 dir.create("data", FALSE)
 write_rds(gwp, "data-raw/gwp.rds")
+write_rds(gbd, "data/gbd.rds")
 write_rds(pop, "data/population.rds")
 ```
