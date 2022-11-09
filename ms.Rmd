@@ -45,7 +45,7 @@ abstract: |
 keywords: well-being, social media
 wordcount: "`r wordcountaddin:::word_count(filename = 'ms.Rmd')`"
 bibliography: "references.bib"
-floatsintext: yes
+floatsintext: yesnc
 linenumbers: yes
 draft: no
 mask: no
@@ -386,7 +386,7 @@ Both datasets (Facebook and Gallup) are proprietary and we therefore could not s
 
 ## Facebook data
 
-We studied two metrics of Facebook adoption, daily (DAU) and monthly active users (MAU), from 2008 to 2019 for 72 countries (see Figure \@ref(fig:fig-forest)). FB estimates yearly DAU & MAU with their corresponding means from June 1 to August 31, and rounds values greater than 10,000,000 to three significant digits, and values less than 10,000,000 to the nearest 10,000. We report analyses based on DAU in the main manuscript, and MAU in the online supplement. Facebook calculates DAU and MAU estimates separately for individuals aged 13-34 and 35+. User age is determined based on Facebook profile information, which can be inaccurate (e.g. young users reporting an older age.) Accordingly, Facebook has trimmed 0.008% of total MAU to exclude accounts with unrealistic or non-reported ages. 
+We studied two metrics of Facebook adoption, daily (DAU) and monthly active users (MAU), from 2008 to 2019 for 72 countries (see Figure \@ref(fig:fig-forest)). FB estimates yearly DAU & MAU with their corresponding means from June 1 to August 31, and rounds values greater than 10,000,000 to three significant digits, and values less than 10,000,000 to the nearest 10,000. Facebook calculates DAU and MAU estimates separately for individuals aged 13-34 and 35+. User age is determined based on Facebook profile information, which can be inaccurate (e.g. young users reporting an older age.) Accordingly, Facebook has trimmed 0.008% of total MAU to exclude accounts with unrealistic or non-reported ages. 
 
 In personal communication, Facebook representatives explained the selection of countries as "The countries provided were selected based upon geographic and cultural diversity and criteria related to data quality, including that geographic and age attribution error is believed to be relatively small." A given user's country is determined based on a number of factors, including the user's IP address and self-reported location.
 
@@ -418,7 +418,7 @@ The NE items are responses to "Did you experience the following feelings during 
 
 Before analysing the data, we converted Facebook DAU and MAU to proportions of each country's and age group's yearly population sizes using population data from the United Nations Department of Economic and Social affairs (<https://population.un.org/wpp/Download/Standard/Population/>). No observations were removed for analyses.
 
-We examined the association between Facebook adoption and well-being through bayesian hierarchical regression models, estimated separately for DAU and MAU, and each of the three well-being outcomes. We regressed the outcome $y$ on time (decades, centered on 2014), within-country centered DAU or MAU (in separate models), age, sex, all the interactions except time by DAU/MAU, and the between-country centered DAU/MAU. We allowed all coefficients to vary randomly across the 72 countries, except the between-country predictor. Because we aggregated the outcomes, we included to standard errors of the outcome in the model to account for the varying group sizes and resulting uncertainties in the modelled data. Formally, we specified the model as
+We examined the association between Facebook adoption and well-being through bayesian hierarchical regression models, estimated separately for DAU and MAU, and each of the three well-being outcomes. We regressed the outcome $y$ on time (decades, centered on 2014), within-country centered DAU or MAU (in separate models), age, sex, all the interactions except time by DAU/MAU, and the between-country centered DAU/MAU. We allowed all coefficients to vary randomly across the 72 countries, except the between-country predictor. Because we aggregated the outcomes, we included standard errors of the outcome in the model to account for the varying group sizes and resulting uncertainties in the modelled data. Formally, we specified the model as
 
 $$
 \begin{aligned} 
@@ -555,14 +555,6 @@ tab_world <- coefs %>%
     Hypothesis %in% c("Average", "Between-country")
   ) %>% 
   mutate(
-    outcome = case_when(
-      outcome == "Life_satisfaction" ~ "LS",
-      outcome == "Negative_experiences" ~ "NE",
-      outcome == "Positive_experiences" ~ "PE",
-      TRUE ~ outcome
-    )
-  ) %>%
-  mutate(
     across(c(Mean, CI_low, CI_high), list("str" = ~number(., .01))),
     result = str_glue(
       "{Mean_str} [{CI_low_str}, {CI_high_str}] ({percent2(pd)})"
@@ -580,13 +572,13 @@ tab_world <- coefs %>%
   arrange(predictor, Outcome)
 
 tab_world %>% 
-  filter(Outcome %in% c("LS", "NE", "PE")) %>% 
+  filter(Outcome %in% oo[1:3]) %>% 
   mutate(
+    Outcome = str_replace(Outcome, "_", " "),
     Predictor = str_to_upper(predictor), 
     Predictor = if_else(1:n() %in% c(1, 4), Predictor, ""),
     .keep = "unused", .before = 1
   ) %>% 
-  rename(X = Predictor, Y = Outcome) %>% 
   mutate(
     across(
       ends_with("country"), 
@@ -609,9 +601,9 @@ tab_world %>%
   )
 ```
 
-Variations in such confounding factors are likely to be significantly smaller within countries but over time in a 12-year period. We therefore next focused on the model's within-country associations ($\alpha_4$). They measure the extent to which Facebook adoption in a given country predicted well-being in that country, adjusting for temporal trends in the country's well-being outcome. For the average country and across age and sex, we found that within-country increases in DAU predicted greater levels of life satisfaction and positive experiences, and lower levels of negative experiences, although only the latter association's 95%CI excluded zero (Table \@ref(tab:tab-world); Within-country).
+Variations in such confounding factors are likely to be significantly smaller within countries but over time in a 12-year period. We therefore next focused on the model's within-country associations ($\alpha_4$). They measure the extent to which Facebook adoption in a given country predicted well-being in that country, adjusting for temporal trends in the country's well-being outcome. For the average country and across age and sex, we found that within-country increases in DAU predicted greater levels of life satisfaction and positive experiences, and lower levels of negative experiences, although only the positive experience association's 95%CI excluded zero (Table \@ref(tab:tab-world); Within-country).
 
-However, these results are qualified because a focus on daily active users could miss those who use Facebook less regularly. To test this possibility, we also conducted our analyses using monthly active Facebook users (MAU) as the predictor. Both the between- and within-country associations linking MAU and well-being were very similar to those linking DAU and well-being, although in general of smaller magnitude, and the within-country link between MAU and negative experiences was not credibly different from zero.
+However, these results are qualified because a focus on daily active users could miss those who use Facebook less regularly. To test this possibility, we also conducted our analyses using monthly active Facebook users (MAU) as the predictor. Both the between- and within-country associations linking MAU and well-being were very similar to those linking DAU and well-being, although in general of smaller magnitude. Moreover, the within-country link between MAU and negative experiences' credibility interval was narrowly centered on zero, indicating relative certainty that the association is practically equivalent to zero.
 
 ```{r}
 tmp <- fits %>% 
@@ -728,7 +720,7 @@ tmp %>%
     "Age", palette = "Set1", aesthetics = c("color")
   ) +
   scale_fill_manual(values = c("white", "white", "#E41A1C", "#377EB8")) +
-  geom_vline(xintercept = 0, lty = 2, size = .25, col = "grey50") +
+  geom_vline(xintercept = 0, lty = 2, linewidth = .25, col = "grey50") +
   geom_linerangeh(
     aes(xmin = CI_low, xmax = CI_high),
     size = .15, position = position_dodge2v(.7), 
@@ -831,7 +823,6 @@ tab_world %>%
     Predictor = if_else(1:n() %in% c(1, 4), Predictor, ""),
     .keep = "unused", .before = 1
   ) %>% 
-  rename(X = Predictor, Y = Outcome) %>% 
   mutate(
     across(
       ends_with("country"), 
