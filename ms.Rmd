@@ -62,7 +62,7 @@ classoption: doc
 output: 
   papaja::apa6_pdf:
     number_sections: false
-    keep_tex: false
+    keep_tex: true
   papaja::apa6_docx: 
     number_sections: false
 always_allow_html: true
@@ -526,6 +526,7 @@ p_b <- d %>%
     )) +
   plot_layout(heights = c(4, 6)) +
   plot_annotation(tag_levels = "A")
+ggsave("Figure-1.pdf", width = 7, height = 6, dpi = 300)
 ```
 
 ```{r}
@@ -755,6 +756,7 @@ tmp %>%
     legend.title = element_blank(),
     legend.box.margin = margin(-10, 0, -5, 0, "pt")
   )
+ggsave("Figure-2.pdf", width = 7.2, height = 7.8, dpi = 300)
 ```
 
 ```{r}
@@ -966,6 +968,7 @@ tmp %>%
     legend.title = element_blank(),
     legend.box.margin = margin(-10, 0, -5, 0, "pt")
   )
+ggsave("Figure-A1.pdf", width = 7.2, height = 7.8, dpi = 300)
 ```
 
 In summary, we extended our main analyses concerning the relationships between country-level Facebook adoption and well-being to the domain of mental health, using openly available meta-analytical estimates of anxiety, depression, and self-harm. Across the six models examining two facets of Facebook adoption and meta-regression estimates of three mental health outcomes, we did not find any associations that were credibly different from zero, or any differences in those associations between demographic groups or countries. However, these results are likely to reflect the invariance in the mental health outcomes combined with the relatively high correlations between the Facebook adoption metrics and time. Therefore, in order to better understand how Facebook adoption might relate to mental health, more detailed data on both Facebook adoption and mental health is urgently required.
