@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: Code supplement to "Estimating the association between Facebook adoption and well-being in 72 countries"
+version: 3.2.1
+license: MIT
+type: software
+abstract: Code and simulated data to reproduce the manuscript.
+message: Please cite as indicated.
+authors:
+  - family-names: Vuorre
+    given-names: Matti
+    orcid: https://orcid.org/0000-0001-5052-066X
+    affiliation: Tilburg University
+keywords:
+  - psychology
